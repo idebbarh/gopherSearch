@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 )
 
 func assert(condition bool, message string) {
@@ -17,12 +18,16 @@ type Command struct {
 	path       string
 }
 
+type TermsFrequency = map[string]int
+
+type FilesTermsFrequency = map[string]TermsFrequency
+
 const (
-	NO_SUBCOMMAND     = iota
-	NO_PATH_TO_INDEX  = iota
-	NO_FILE_TO_SERVE  = iota
-	UNKOWN_SUBCOMMAND = iota
-	TOTAL_ERRORS      = iota
+	NO_SUBCOMMAND = iota
+	NO_PATH_TO_INDEX
+	NO_FILE_TO_SERVE
+	UNKOWN_SUBCOMMAND
+	TOTAL_ERRORS
 )
 
 func printHelpToUser(errorType int) {
@@ -55,10 +60,67 @@ func printHelpToUser(errorType int) {
 	os.Exit(1)
 }
 
-func handleCommands(c Command) {
+func getFileContent(filePath string) []string {
+	return strings.Split("Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.", " ")
+}
+
+func getPathFiles(curPath string) []string {
+	curFiles := []string{}
+	fi, err := os.Stat(curPath)
+	if err != nil {
+		fmt.Printf("ERROR: Could not get info of %s : %v", curPath, err)
+		os.Exit(1)
+	}
+	mode := fi.Mode()
+	if mode.IsRegular() {
+		return []string{curPath}
+	} else if mode.IsDir() {
+		entries, err := os.ReadDir(curPath)
+		if err != nil {
+			fmt.Printf("ERROR: Could not read dir %s : %v", curPath, err)
+			os.Exit(1)
+		}
+
+		for _, l := range entries {
+			curFiles = append(curFiles, getPathFiles(curPath+"/"+l.Name())...)
+		}
+	}
+	return curFiles
+}
+
+func getTermsFrequency(terms []string) TermsFrequency {
+	tf := TermsFrequency{}
+	for _, t := range terms {
+		_, ok := tf[t]
+		if ok {
+			tf[t] += 1
+		} else {
+			tf[t] = 1
+		}
+	}
+	return tf
+}
+
+func indexHandler(curPath string) {
+	files := getPathFiles(curPath)
+	ftf := FilesTermsFrequency{}
+	for _, f := range files {
+		fileContent := getFileContent(f)
+		tf := getTermsFrequency(fileContent)
+		ftf[f] = tf
+	}
+
+	fmt.Println(len(ftf))
+	for v, k := range ftf {
+		fmt.Println(v, k)
+	}
+}
+
+func (c Command) handleCommand() {
 	switch c.subcommand {
 	case "index":
 		fmt.Printf("indexing: %s", c.path)
+		indexHandler(c.path)
 	case "serve":
 		fmt.Printf("serving: %s", c.path)
 	default:
@@ -91,5 +153,5 @@ func main() {
 		path:       args[1],
 	}
 
-	handleCommands(command)
+	command.handleCommand()
 }
