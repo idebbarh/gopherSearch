@@ -30,6 +30,37 @@ const (
 	TOTAL_ERRORS
 )
 
+func simpleHtmlParser(htmlContent string, parsedContent *string) {
+	if len(htmlContent) == 0 {
+		return
+	}
+
+	count := 0
+
+	if string(htmlContent[count]) == "<" {
+		for count < len(htmlContent) && string(htmlContent[count]) != ">" {
+			count += 1
+		}
+
+		if count < len(htmlContent) {
+			htmlContent = htmlContent[count+1:]
+			simpleHtmlParser(htmlContent, parsedContent)
+		}
+		return
+	}
+
+	for count < len(htmlContent) && string(htmlContent[count]) != "<" {
+		count += 1
+	}
+
+	*parsedContent += htmlContent[:count]
+
+	if count < len(htmlContent) {
+		htmlContent = htmlContent[count:]
+		simpleHtmlParser(htmlContent, parsedContent)
+	}
+}
+
 func printHelpToUser(errorType int) {
 	assert(TOTAL_ERRORS == 4, "You are not handling all error types")
 	switch errorType {
@@ -129,29 +160,79 @@ func (c Command) handleCommand() {
 }
 
 func main() {
-	args := os.Args
+	simpleHtml := `<!DOCTYPE html>
+<html>
+<head>
+    <title>Complex HTML Example</title>
+</head>
+<body>
+    <header>
+        <h1>Welcome to our website!</h1>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/about">About</a></li>
+                <li><a href="/services">Services</a></li>
+                <li><a href="/contact">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <section id="about">
+            <h2>About Us</h2>
+            <p>
+                We are a dedicated team of professionals with a mission to provide high-quality services to our clients.
+            </p>
+        </section>
+        <section id="services">
+            <h2>Our Services</h2>
+            <ul>
+                <li>Web Development</li>
+                <li>Mobile App Development</li>
+                <li>Digital Marketing</li>
+            </ul>
+        </section>
+        <section id="contact">
+            <h2>Contact Us</h2>
+            <address>
+                Email: <a href="mailto:contact@example.com">contact@example.com</a><br>
+                Phone: <a href="tel:+1234567890">123-456-7890</a>
+            </address>
+        </section>
+    </main>
+    <footer>
+        &copy; 2023 Company Name
+    </footer>
+</body>
+</html>`
+	var parsedContent string
+	simpleHtmlParser(simpleHtml, &parsedContent)
 
-	if len(args) < 2 {
-		printHelpToUser(NO_SUBCOMMAND)
-	}
+	fmt.Println(parsedContent)
 
-	args = args[1:]
-
-	if len(args) < 2 {
-		subcommand := args[0]
-		if subcommand == "index" {
-			printHelpToUser(NO_PATH_TO_INDEX)
-		} else if subcommand == "serve" {
-			printHelpToUser(NO_FILE_TO_SERVE)
-		} else {
-			printHelpToUser(UNKOWN_SUBCOMMAND)
-		}
-	}
-
-	command := Command{
-		subcommand: args[0],
-		path:       args[1],
-	}
-
-	command.handleCommand()
+	// args := os.Args
+	//
+	// if len(args) < 2 {
+	// 	printHelpToUser(NO_SUBCOMMAND)
+	// }
+	//
+	// args = args[1:]
+	//
+	// if len(args) < 2 {
+	// 	subcommand := args[0]
+	// 	if subcommand == "index" {
+	// 		printHelpToUser(NO_PATH_TO_INDEX)
+	// 	} else if subcommand == "serve" {
+	// 		printHelpToUser(NO_FILE_TO_SERVE)
+	// 	} else {
+	// 		printHelpToUser(UNKOWN_SUBCOMMAND)
+	// 	}
+	// }
+	//
+	// command := Command{
+	// 	subcommand: args[0],
+	// 	path:       args[1],
+	// }
+	//
+	// command.handleCommand()
 }
