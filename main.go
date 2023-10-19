@@ -4,14 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
+	"unicode"
 )
-
-func assert(condition bool, message string) {
-	if !condition {
-		panic(errors.New("Assertion failed: " + message))
-	}
-}
 
 type Command struct {
 	subcommand string
@@ -30,34 +24,9 @@ const (
 	TOTAL_ERRORS
 )
 
-func simpleHtmlParser(htmlContent string, parsedContent *string) {
-	if len(htmlContent) == 0 {
-		return
-	}
-
-	count := 0
-
-	if string(htmlContent[count]) == "<" {
-		for count < len(htmlContent) && string(htmlContent[count]) != ">" {
-			count += 1
-		}
-
-		if count < len(htmlContent) {
-			htmlContent = htmlContent[count+1:]
-			simpleHtmlParser(htmlContent, parsedContent)
-		}
-		return
-	}
-
-	for count < len(htmlContent) && string(htmlContent[count]) != "<" {
-		count += 1
-	}
-
-	*parsedContent += htmlContent[:count]
-
-	if count < len(htmlContent) {
-		htmlContent = htmlContent[count:]
-		simpleHtmlParser(htmlContent, parsedContent)
+func assert(condition bool, message string) {
+	if !condition {
+		panic(errors.New("Assertion failed: " + message))
 	}
 }
 
@@ -91,8 +60,91 @@ func printHelpToUser(errorType int) {
 	os.Exit(1)
 }
 
-func getFileContent(filePath string) []string {
-	return strings.Split("Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.", " ")
+func htmlParser(htmlContent string, parsedContent *string) {
+	if len(htmlContent) == 0 {
+		return
+	}
+
+	index := 0
+
+	if string(htmlContent[index]) == "<" {
+		for index < len(htmlContent) && string(htmlContent[index]) != ">" {
+			index += 1
+		}
+
+		if index < len(htmlContent) {
+			htmlContent = htmlContent[index+1:]
+			htmlParser(htmlContent, parsedContent)
+		}
+		return
+	}
+
+	for index < len(htmlContent) && string(htmlContent[index]) != "<" {
+		index += 1
+	}
+
+	*parsedContent += htmlContent[:index]
+
+	if index < len(htmlContent) {
+		htmlContent = htmlContent[index:]
+		htmlParser(htmlContent, parsedContent)
+	}
+}
+
+func lexer(content string) []string {
+	if len(content) == 0 {
+		return []string{}
+	}
+
+	var res []string
+	index := 0
+
+	r := rune(content[index])
+
+	if unicode.IsSpace(r) {
+		for index < len(content) && unicode.IsSpace(rune(content[index])) {
+			index += 1
+		}
+		if index < len(content) {
+			content = content[index:]
+			res = append(res, lexer(content)...)
+		}
+	} else if unicode.IsLetter(r) {
+		for index < len(content) && (unicode.IsLetter(rune(content[index])) || unicode.IsDigit(rune(content[index]))) {
+			index += 1
+		}
+
+		res = append(res, content[:index])
+		if index < len(content) {
+			content = content[index:]
+			res = append(res, lexer(content)...)
+		}
+	} else if unicode.IsDigit(r) {
+
+		for index < len(content) && unicode.IsDigit(rune(content[index])) {
+			index += 1
+		}
+
+		res = append(res, content[:index])
+		if index < len(content) {
+			content = content[index:]
+			res = append(res, lexer(content)...)
+		}
+	} else {
+		index += 1
+		res = append(res, content[:index])
+		if index < len(content) {
+			content = content[index:]
+			res = append(res, lexer(content)...)
+		}
+	}
+
+	return res
+}
+
+func getFileContent(filePath string) (string, error) {
+	fileContent, err := os.ReadFile(filePath)
+	return string(fileContent), err
 }
 
 func getPathFiles(curPath string) []string {
@@ -119,9 +171,9 @@ func getPathFiles(curPath string) []string {
 	return curFiles
 }
 
-func getTermsFrequency(terms []string) TermsFrequency {
+func getTermsFrequency(fileContent string) TermsFrequency {
 	tf := TermsFrequency{}
-	for _, t := range terms {
+	for _, t := range lexer(fileContent) {
 		_, ok := tf[t]
 		if ok {
 			tf[t] += 1
@@ -135,22 +187,33 @@ func getTermsFrequency(terms []string) TermsFrequency {
 func indexHandler(curPath string) {
 	files := getPathFiles(curPath)
 	ftf := FilesTermsFrequency{}
+
 	for _, f := range files {
-		fileContent := getFileContent(f)
-		tf := getTermsFrequency(fileContent)
+		fileContent, err := getFileContent(f)
+		if err != nil {
+			fmt.Printf("ERROR: Could not read file %s : %v", f, err)
+			continue
+		}
+
+		var parsedFile string
+		htmlParser(fileContent, &parsedFile)
+		tf := getTermsFrequency(parsedFile)
 		ftf[f] = tf
 	}
 
-	fmt.Println(len(ftf))
-	for v, k := range ftf {
-		fmt.Println(v, k)
+	for f, tf := range ftf {
+		fmt.Println(len(tf))
+		fmt.Println(f, "==>")
+		for w, freq := range tf {
+			fmt.Println("  ", w, "==>", freq)
+		}
 	}
 }
 
 func (c Command) handleCommand() {
 	switch c.subcommand {
 	case "index":
-		fmt.Printf("indexing: %s", c.path)
+		fmt.Printf("indexing: %s\n", c.path)
 		indexHandler(c.path)
 	case "serve":
 		fmt.Printf("serving: %s", c.path)
@@ -160,79 +223,29 @@ func (c Command) handleCommand() {
 }
 
 func main() {
-	simpleHtml := `<!DOCTYPE html>
-<html>
-<head>
-    <title>Complex HTML Example</title>
-</head>
-<body>
-    <header>
-        <h1>Welcome to our website!</h1>
-        <nav>
-            <ul>
-                <li><a href="/">Home</a></li>
-                <li><a href="/about">About</a></li>
-                <li><a href="/services">Services</a></li>
-                <li><a href="/contact">Contact</a></li>
-            </ul>
-        </nav>
-    </header>
-    <main>
-        <section id="about">
-            <h2>About Us</h2>
-            <p>
-                We are a dedicated team of professionals with a mission to provide high-quality services to our clients.
-            </p>
-        </section>
-        <section id="services">
-            <h2>Our Services</h2>
-            <ul>
-                <li>Web Development</li>
-                <li>Mobile App Development</li>
-                <li>Digital Marketing</li>
-            </ul>
-        </section>
-        <section id="contact">
-            <h2>Contact Us</h2>
-            <address>
-                Email: <a href="mailto:contact@example.com">contact@example.com</a><br>
-                Phone: <a href="tel:+1234567890">123-456-7890</a>
-            </address>
-        </section>
-    </main>
-    <footer>
-        &copy; 2023 Company Name
-    </footer>
-</body>
-</html>`
-	var parsedContent string
-	simpleHtmlParser(simpleHtml, &parsedContent)
+	args := os.Args
 
-	fmt.Println(parsedContent)
+	if len(args) < 2 {
+		printHelpToUser(NO_SUBCOMMAND)
+	}
 
-	// args := os.Args
-	//
-	// if len(args) < 2 {
-	// 	printHelpToUser(NO_SUBCOMMAND)
-	// }
-	//
-	// args = args[1:]
-	//
-	// if len(args) < 2 {
-	// 	subcommand := args[0]
-	// 	if subcommand == "index" {
-	// 		printHelpToUser(NO_PATH_TO_INDEX)
-	// 	} else if subcommand == "serve" {
-	// 		printHelpToUser(NO_FILE_TO_SERVE)
-	// 	} else {
-	// 		printHelpToUser(UNKOWN_SUBCOMMAND)
-	// 	}
-	// }
-	//
-	// command := Command{
-	// 	subcommand: args[0],
-	// 	path:       args[1],
-	// }
-	//
-	// command.handleCommand()
+	args = args[1:]
+
+	if len(args) < 2 {
+		subcommand := args[0]
+		if subcommand == "index" {
+			printHelpToUser(NO_PATH_TO_INDEX)
+		} else if subcommand == "serve" {
+			printHelpToUser(NO_FILE_TO_SERVE)
+		} else {
+			printHelpToUser(UNKOWN_SUBCOMMAND)
+		}
+	}
+
+	command := Command{
+		subcommand: args[0],
+		path:       args[1],
+	}
+
+	command.handleCommand()
 }
