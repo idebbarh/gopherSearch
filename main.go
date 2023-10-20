@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"unicode"
 )
 
@@ -114,7 +116,7 @@ func lexer(content string) []string {
 			index += 1
 		}
 
-		res = append(res, content[:index])
+		res = append(res, strings.ToUpper(content[:index]))
 		if index < len(content) {
 			content = content[index:]
 			res = append(res, lexer(content)...)
@@ -155,8 +157,18 @@ func getPathFiles(curPath string) []string {
 		os.Exit(1)
 	}
 	mode := fi.Mode()
+
 	if mode.IsRegular() {
-		return []string{curPath}
+		res := []string{}
+
+		pathParts := strings.Split(curPath, "/")
+		lastPart := pathParts[len(pathParts)-1]
+		lastPartParts := strings.Split(lastPart, ".")
+
+		if len(lastPartParts) >= 2 && lastPartParts[len(lastPartParts)-1] == "html" {
+			res = append(res, curPath)
+		}
+		return res
 	} else if mode.IsDir() {
 		entries, err := os.ReadDir(curPath)
 		if err != nil {
@@ -167,6 +179,8 @@ func getPathFiles(curPath string) []string {
 		for _, l := range entries {
 			curFiles = append(curFiles, getPathFiles(curPath+"/"+l.Name())...)
 		}
+	} else {
+		return []string{}
 	}
 	return curFiles
 }
@@ -184,11 +198,28 @@ func getTermsFrequency(fileContent string) TermsFrequency {
 	return tf
 }
 
+func saveToJson(filename string, ftf FilesTermsFrequency) {
+	jsonData, err := json.Marshal(ftf)
+	if err != nil {
+		fmt.Println("ERROR: could not convert data to json format")
+		os.Exit(1)
+	}
+
+	err = os.WriteFile(filename, jsonData, 0666)
+
+	if err != nil {
+		fmt.Println("ERROR: could not save data to json file")
+		os.Exit(1)
+	}
+
+	fmt.Println("Data saved to: ", filename)
+}
+
 func indexHandler(curPath string) {
 	files := getPathFiles(curPath)
 	ftf := FilesTermsFrequency{}
-
 	for _, f := range files {
+		fmt.Printf("indexing %s....\n", f)
 		fileContent, err := getFileContent(f)
 		if err != nil {
 			fmt.Printf("ERROR: Could not read file %s : %v", f, err)
@@ -201,13 +232,7 @@ func indexHandler(curPath string) {
 		ftf[f] = tf
 	}
 
-	for f, tf := range ftf {
-		fmt.Println(len(tf))
-		fmt.Println(f, "==>")
-		for w, freq := range tf {
-			fmt.Println("  ", w, "==>", freq)
-		}
-	}
+	saveToJson("index.json", ftf)
 }
 
 func (c Command) handleCommand() {
