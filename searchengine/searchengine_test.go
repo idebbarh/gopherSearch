@@ -1,4 +1,4 @@
-package main
+package searchengine
 
 import (
 	"testing"
