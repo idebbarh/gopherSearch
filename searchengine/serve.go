@@ -12,13 +12,14 @@ type SearchQuery struct {
 	query string
 }
 
+type FilesRank = map[string]float64
+
 func serveHandler(filePath string) {
 	fs := http.FileServer(http.Dir("./static"))
 
 	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet && r.URL.Path == "/search" {
-			searchQuery := r.URL.Query()["q"]
-			sq := SearchQuery{query: strings.Join(searchQuery, " ")}
+			searchQuery := lexer(strings.Join(r.URL.Query()["q"], " "))
 
 			loadedJsonFile, readFileErr := os.ReadFile(filePath)
 
@@ -29,11 +30,35 @@ func serveHandler(filePath string) {
 
 			var ftf FilesTermsFrequency
 
+			filesRank := FilesRank{}
+
 			json.Unmarshal(loadedJsonFile, &ftf)
 
-			jsonResponse, marshalErr := json.Marshal(sq)
+			var termsIDFValue float64 = 0
 
-			if marshalErr == nil {
+			for _, term := range searchQuery {
+				termsIDFValue += calcIDF(ftf, term)
+			}
+
+			fmt.Println(termsIDFValue)
+			for f, tf := range ftf {
+				var rank float64 = 0
+				for _, term := range searchQuery {
+					termTFValue := calcTF(tf, term)
+					rank += termsIDFValue * termTFValue
+				}
+				filesRank[f] = rank
+			}
+
+			filesRank = sortMap(filesRank, 10)
+
+			for key, value := range filesRank {
+				fmt.Printf("%s\t%f\n", key, value)
+			}
+
+			jsonResponse, marshalErr := json.Marshal(filesRank)
+
+			if marshalErr != nil {
 				http.Error(w, "Failed to marshal JSON", http.StatusInternalServerError)
 				return
 			}

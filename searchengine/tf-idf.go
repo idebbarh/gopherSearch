@@ -4,13 +4,15 @@ import (
 	"math"
 )
 
-func calcTF(tf TermsFrequency, t string) int {
+func calcTF(tf TermsFrequency, t string) float64 {
 	n, ok := tf[t] // term freq on specific document
 	if !ok {
 		n = 0
 	}
+
 	N := len(tf) // number of terms in specific document
-	return n / N
+
+	return float64(n) / float64(N)
 }
 
 func calcIDF(ftf FilesTermsFrequency, t string) float64 {
