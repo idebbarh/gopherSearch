@@ -89,7 +89,7 @@ body {
     font-size: 8rem;
   }
 }
-.search-form {
+#search-form {
   width: 700px;
   max-width: 100%;
 }

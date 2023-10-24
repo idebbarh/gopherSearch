@@ -1,0 +1,4 @@
+package searchengine
+
+func calcTf() {
+}
