@@ -6,52 +6,41 @@ import (
 	"sort"
 )
 
-type Item struct {
+type Pair struct {
 	key   string
 	value float64
 }
 
-type ItemSlice []Item
+type Pairs []Pair
 
-func (s ItemSlice) Len() int {
-	return len(s)
+func (p Pairs) Len() int {
+	return len(p)
 }
 
-func (s ItemSlice) Less(i, j int) bool {
-	return s[i].value > s[j].value
+func (p Pairs) Less(i, j int) bool {
+	return p[i].value > p[j].value
 }
 
-func (s ItemSlice) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
+func (p Pairs) Swap(i, j int) {
+	p[i], p[j] = p[j], p[i]
 }
 
-func sortMap(f FilesRank, n int) FilesRank {
-	if n < 0 {
-		n = len(f)
-	}
-
-	pairsSlice := ItemSlice{}
+func rankDocs(f FilesRank) []string {
+	docs := []string{}
+	pairs := Pairs{}
 
 	for file, rank := range f {
-		pairsSlice = append(pairsSlice, Item{key: file, value: rank})
+		pairs = append(pairs, Pair{key: file, value: rank})
 	}
 
-	sort.Sort(pairsSlice)
+	sort.Sort(pairs)
 
-	sortedFilesRank := make(map[string]float64)
-
-	count := 0
-
-	for _, pair := range pairsSlice {
-		if count == n {
-			break
-		}
-		count += 1
-		fmt.Println(pair.value)
-		sortedFilesRank[pair.key] = pair.value
+	for _, p := range pairs {
+		fmt.Println(p.value)
+		docs = append(docs, p.key)
 	}
 
-	return sortedFilesRank
+	return docs
 }
 
 func assert(condition bool, message string) {

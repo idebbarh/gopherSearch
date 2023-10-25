@@ -14,6 +14,10 @@ type SearchQuery struct {
 
 type FilesRank = map[string]float64
 
+type ResponseType struct {
+	Result []string
+}
+
 func serveHandler(filePath string) {
 	fs := http.FileServer(http.Dir("./static"))
 
@@ -40,7 +44,6 @@ func serveHandler(filePath string) {
 				termsIDFValue += calcIDF(ftf, term)
 			}
 
-			fmt.Println(termsIDFValue)
 			for f, tf := range ftf {
 				var rank float64 = 0
 				for _, term := range searchQuery {
@@ -50,13 +53,11 @@ func serveHandler(filePath string) {
 				filesRank[f] = rank
 			}
 
-			filesRank = sortMap(filesRank, 10)
+			rankedDocs := rankDocs(filesRank)
 
-			for key, value := range filesRank {
-				fmt.Printf("%s\t%f\n", key, value)
-			}
+			response := ResponseType{Result: rankedDocs}
 
-			jsonResponse, marshalErr := json.Marshal(filesRank)
+			jsonResponse, marshalErr := json.Marshal(response)
 
 			if marshalErr != nil {
 				http.Error(w, "Failed to marshal JSON", http.StatusInternalServerError)
