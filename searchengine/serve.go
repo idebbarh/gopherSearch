@@ -55,7 +55,7 @@ func serveHandler(filePath string) {
 
 			rankedDocs := rankDocs(filesRank)
 
-			response := ResponseType{Result: rankedDocs}
+			response := ResponseType{Result: rankedDocs[0:10]}
 
 			jsonResponse, marshalErr := json.Marshal(response)
 

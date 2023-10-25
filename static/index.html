@@ -14,16 +14,19 @@
     />
   </head>
   <body>
-    <div class="container">
-      <div class="logo">
-        <h1><span>gopher</span><span>Search</span></h1>
-      </div>
-      <form id="search-form">
-        <div class="search-form__row">
-          <input type="text" class="search-form__input" />
-          <button class="search-form__submit-btn">search</button>
+    <div id="app">
+      <div class="search-container">
+        <div class="search-container__logo">
+          <h1><span>gopher</span><span>Search</span></h1>
         </div>
-      </form>
+        <form id="search-form">
+          <div class="search-form__row">
+            <input type="text" class="search-form__input" />
+            <button class="search-form__submit-btn">search</button>
+          </div>
+        </form>
+      </div>
+      <div class="search-result-container"></div>
     </div>
     <script src="index.js"></script>
   </body>
