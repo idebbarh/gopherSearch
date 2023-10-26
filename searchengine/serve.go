@@ -50,12 +50,15 @@ func serveHandler(filePath string) {
 					termTFValue := calcTF(tf, term)
 					rank += termsIDFValue * termTFValue
 				}
+				if rank == 0 {
+					continue
+				}
 				filesRank[f] = rank
 			}
 
 			rankedDocs := rankDocs(filesRank)
 
-			response := ResponseType{Result: rankedDocs[0:10]}
+			response := ResponseType{Result: rankedDocs}
 
 			jsonResponse, marshalErr := json.Marshal(response)
 

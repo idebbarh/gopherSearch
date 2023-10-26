@@ -2,7 +2,6 @@ package searchengine
 
 import (
 	"errors"
-	"fmt"
 	"sort"
 )
 
@@ -36,7 +35,6 @@ func rankDocs(f FilesRank) []string {
 	sort.Sort(pairs)
 
 	for _, p := range pairs {
-		fmt.Println(p.value)
 		docs = append(docs, p.key)
 	}
 
