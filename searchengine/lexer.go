@@ -5,6 +5,37 @@ import (
 	"unicode"
 )
 
+func getDocTitle(htmlContent string) string {
+	l := 0
+	for l < len(htmlContent) {
+		if string(htmlContent[l]) == "<" {
+			prevTag := ""
+			l += 1
+			for l < len(htmlContent) && string(htmlContent[l]) != ">" {
+				prevTag += string(htmlContent[l])
+				l += 1
+			}
+
+			if string(htmlContent[l]) != ">" {
+				return ""
+			}
+
+			l += 1
+			if prevTag == "title" {
+				r := l
+
+				for r < len(htmlContent) && string(htmlContent[r]) != "<" {
+					r += 1
+				}
+				return htmlContent[l:r]
+			}
+		} else {
+			l += 1
+		}
+	}
+	return ""
+}
+
 func htmlParser(htmlContent string, parsedContent *string) {
 	if len(htmlContent) == 0 {
 		return

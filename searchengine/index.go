@@ -1,6 +1,8 @@
 package searchengine
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func indexHandler(curPath string) {
 	files := getPathFiles(curPath)

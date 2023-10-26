@@ -51,3 +51,29 @@ func TestHtmlParserAndLexer(t *testing.T) {
 		}
 	}
 }
+
+func TestGetDocTitle(t *testing.T) {
+	testCases := TestCases{{input: `
+    <!doctype html>
+    <head>
+      <title>this is the document title 1 1 3 # %</title>
+    </head>
+    <html>
+      <body>
+        <p>
+          The quick brown fox jumps over the lazy dog. The dog barks, and the fox
+          runs away.
+        </p>
+      </body>
+    </html>
+        `, expected: lexer("this is the document title 1 1 3 # %")}}
+
+	for _, test := range testCases {
+		result := lexer(getDocTitle(test.input))
+		expected := test.expected
+
+		if !isSameSlices(result, expected) {
+			t.Errorf("expected:\n====> %v\nresult:\n===> %v", result, expected)
+		}
+	}
+}
