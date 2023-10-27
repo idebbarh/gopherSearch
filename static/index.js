@@ -14,7 +14,7 @@ function renderDocs(docs) {
 
   docs.Result.forEach((doc) => {
     const docElement = document.createElement("p");
-    docElement.innerText = doc;
+    docElement.innerText = doc.Title;
     resultContainer.appendChild(docElement);
   });
 }

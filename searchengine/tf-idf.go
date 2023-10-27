@@ -19,7 +19,7 @@ func calcIDF(ftf FilesTermsFrequency, t string) float64 {
 	n := 0        // number of document that have this term
 	N := len(ftf) // number of document
 	for _, tf := range ftf {
-		_, ok := tf[t]
+		_, ok := tf.Terms[t]
 		if ok {
 			n += 1
 		}

@@ -8,7 +8,12 @@ import (
 
 type TermsFrequency = map[string]int
 
-type FilesTermsFrequency = map[string]TermsFrequency
+type FileData struct {
+	Terms TermsFrequency
+	Title string
+}
+
+type FilesTermsFrequency = map[string]FileData
 
 func saveToJson(filename string, ftf FilesTermsFrequency) {
 	jsonData, err := json.Marshal(ftf)

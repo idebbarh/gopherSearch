@@ -14,8 +14,13 @@ type SearchQuery struct {
 
 type FilesRank = map[string]float64
 
+type ResultType struct {
+	Path  string
+	Title string
+}
+
 type ResponseType struct {
-	Result []string
+	Result []ResultType
 }
 
 func serveHandler(filePath string) {
@@ -47,7 +52,7 @@ func serveHandler(filePath string) {
 			for f, tf := range ftf {
 				var rank float64 = 0
 				for _, term := range searchQuery {
-					termTFValue := calcTF(tf, term)
+					termTFValue := calcTF(tf.Terms, term)
 					rank += termsIDFValue * termTFValue
 				}
 				if rank == 0 {
@@ -57,8 +62,14 @@ func serveHandler(filePath string) {
 			}
 
 			rankedDocs := rankDocs(filesRank)
+			result := []ResultType{}
+			response := ResponseType{}
 
-			response := ResponseType{Result: rankedDocs}
+			for _, path := range rankedDocs {
+				result = append(result, ResultType{Path: path, Title: ftf[path].Title})
+			}
+
+			response.Result = result
 
 			jsonResponse, marshalErr := json.Marshal(response)
 
