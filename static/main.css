@@ -1,8 +1,9 @@
 :root {
-  --main-bg: #2e2f31;
+  --main-bg: #202124;
   --main-blue: #4285f4;
   --main-red: #ea4335;
   --main-green: #34a853;
+  --doc-link-color: #8ab4f8;
 }
 
 * {
@@ -93,4 +94,16 @@ body {
 }
 .search-result-container {
   margin-top: 170px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.search-result-container__doc-link {
+  text-decoration: none;
+  font-size: 1.6rem;
+  color: var(--doc-link-color);
+  text-transform: capitalize;
+}
+.search-result-container__doc-link:hover {
+  text-decoration: underline;
 }

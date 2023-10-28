@@ -23,13 +23,16 @@ type ResponseType struct {
 	Result []ResultType
 }
 
+type FileToServeInfo struct {
+	FilePath string `josn:"filePath"`
+}
+
 func serveHandler(filePath string) {
 	fs := http.FileServer(http.Dir("./static"))
 
 	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet && r.URL.Path == "/search" {
 			searchQuery := lexer(strings.Join(r.URL.Query()["q"], " "))
-
 			loadedJsonFile, readFileErr := os.ReadFile(filePath)
 
 			if readFileErr != nil {
@@ -87,9 +90,18 @@ func serveHandler(filePath string) {
 			}
 
 			return
-		}
+		} else if r.Method == http.MethodPost && r.URL.Path == "/file" {
+			var fileToServeInfo FileToServeInfo
+			if err := json.NewDecoder(r.Body).Decode(&fileToServeInfo); err != nil {
+				http.Error(w, "Failed to decode request body", http.StatusInternalServerError)
+			}
 
-		fs.ServeHTTP(w, r)
+			fileToServePath := fileToServeInfo.FilePath
+			http.ServeFile(w, r, fileToServePath)
+
+		} else {
+			fs.ServeHTTP(w, r)
+		}
 	}))
 
 	address := "localhost:8080"

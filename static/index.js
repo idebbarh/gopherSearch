@@ -8,14 +8,33 @@ function animateFromMiddleToTop() {
   searchContainer.classList.add("search-container--animate");
 }
 
+function getDocLink(path, title) {
+  const linkElement = document.createElement("a");
+  linkElement.className = "search-result-container__doc-link";
+  linkElement.innerText = title;
+
+  linkElement.addEventListener("click", (e) => {
+    fetch("/file", {
+      method: "POST",
+      body: JSON.stringify({ filePath: path }),
+    })
+      .then((res) => {
+        return res.blob();
+      })
+      .then((blob) => {
+        const fileURL = URL.createObjectURL(blob);
+        window.open(fileURL, "_blank");
+      });
+  });
+  return linkElement;
+}
+
 function renderDocs(docs) {
   const resultContainer = document.querySelector(".search-result-container");
   resultContainer.innerHTML = "";
 
   docs.Result.forEach((doc) => {
-    const docElement = document.createElement("p");
-    docElement.innerText = doc.Title;
-    resultContainer.appendChild(docElement);
+    resultContainer.appendChild(getDocLink(doc.Path, doc.Title));
   });
 }
 
