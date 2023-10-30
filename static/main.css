@@ -22,7 +22,7 @@ body {
 #app {
   padding: 1rem;
   position: relative;
-  height: 100vh;
+  min-height: 100vh;
 }
 .search-container {
   display: flex;
@@ -107,4 +107,23 @@ body {
 .search-result-container__doc-link:hover {
   text-decoration: underline;
   cursor: pointer;
+}
+#next-docs-btn {
+  background: #303134;
+  display: block;
+  width: 100%;
+  margin: 0 auto;
+  border: none;
+  border-radius: 3rem;
+  padding: 0.6rem 0;
+  color: #bdc1c6;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+#next-docs-btn:hover {
+  background: #3c4043;
+}
+#next-docs-btn::first-letter {
+  text-transform: capitalize;
 }

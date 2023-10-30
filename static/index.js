@@ -71,27 +71,28 @@ function getLinkElement(path, title) {
 function renderDocs(docs, newSearch = true) {
   const resultContainer = document.querySelector(".search-result-container");
   const getNextDocsBtn = document.getElementById("next-docs-btn");
+  const isCompleteData = docs.IsCompleteData;
 
   if (newSearch) {
     resultContainer.innerHTML = "";
   }
   docs.Result.forEach((doc) => {
-    if (newSearch && !getNextDocsBtn) {
+    if (!getNextDocsBtn) {
       resultContainer.appendChild(getLinkElement(doc.Path, doc.Title));
     } else {
       getNextDocsBtn.before(getLinkElement(doc.Path, doc.Title));
     }
   });
 
-  if (newSearch && !getNextDocsBtn) {
+  if (!isCompleteData && !getNextDocsBtn) {
     const getNextDocsBtn = document.createElement("button");
     getNextDocsBtn.id = "next-docs-btn";
-    getNextDocsBtn.innerText = "get next docs";
+    getNextDocsBtn.innerText = "more results";
     getNextDocsBtn.addEventListener("click", getNextDocs);
     resultContainer.appendChild(getNextDocsBtn);
   }
 
-  if (docs.IsCompleteData && getNextDocsBtn) {
+  if (isCompleteData && getNextDocsBtn) {
     resultContainer.removeChild(getNextDocsBtn);
   }
 }
