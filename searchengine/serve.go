@@ -29,7 +29,8 @@ type PaginationInfo struct {
 	currentIndex int
 }
 
-func (response *ResponseType) setResponseResult(result []ResultType, p *PaginationInfo, w http.ResponseWriter) {
+func docsResponseHandler(result []ResultType, p *PaginationInfo, w http.ResponseWriter) {
+	response := ResponseType{}
 	paginationStart := p.currentIndex*p.perRequest - p.perRequest
 
 	paginationEnd := paginationStart + p.perRequest
@@ -110,6 +111,7 @@ func serveHandler(filePath string) {
 				if rank == 0 {
 					continue
 				}
+
 				filesRank[f] = rank
 			}
 
@@ -121,18 +123,13 @@ func serveHandler(filePath string) {
 				result = append(result, ResultType{Path: path, Title: ftf[path].Title})
 			}
 
-			response := ResponseType{}
-
-			response.setResponseResult(result, &paginationInfo, w)
+			docsResponseHandler(result, &paginationInfo, w)
 
 		} else if r.Method == http.MethodGet && r.URL.Path == "/file" {
 			fileToServePath := r.URL.Query().Get("path")
 			http.ServeFile(w, r, fileToServePath)
-
 		} else if r.Method == http.MethodGet && r.URL.Path == "/nextSearch" {
-			response := ResponseType{}
-			response.setResponseResult(result, &paginationInfo, w)
-
+			docsResponseHandler(result, &paginationInfo, w)
 		} else {
 			fs.ServeHTTP(w, r)
 		}
