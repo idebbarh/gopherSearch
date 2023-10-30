@@ -20,7 +20,8 @@ type ResultType struct {
 }
 
 type ResponseType struct {
-	Result []ResultType
+	Result         []ResultType
+	IsCompleteData bool
 }
 
 type PaginationInfo struct {
@@ -33,9 +34,23 @@ func (response *ResponseType) setResponseResult(result []ResultType, p *Paginati
 
 	paginationEnd := paginationStart + p.perRequest
 
+	if paginationStart >= len(result) {
+		paginationStart = len(result) - 1
+	}
+
+	if paginationEnd >= len(result) {
+		paginationEnd = len(result)
+	}
+
 	response.Result = result[paginationStart:paginationEnd]
 
-	p.currentIndex += 1
+	response.IsCompleteData = false
+
+	if paginationEnd < len(result) {
+		p.currentIndex += 1
+	} else {
+		response.IsCompleteData = true
+	}
 
 	jsonResponse, marshalErr := json.Marshal(response)
 
@@ -58,10 +73,12 @@ func serveHandler(filePath string) {
 	fs := http.FileServer(http.Dir("./static"))
 
 	result := []ResultType{}
-	paginationInfo := PaginationInfo{perRequest: 5, currentIndex: 1}
+	paginationInfo := PaginationInfo{}
 
 	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet && r.URL.Path == "/search" {
+
+			paginationInfo.perRequest = 10
 			paginationInfo.currentIndex = 1
 
 			searchQuery := lexer(strings.Join(r.URL.Query()["q"], " "))
@@ -112,7 +129,7 @@ func serveHandler(filePath string) {
 			fileToServePath := r.URL.Query().Get("path")
 			http.ServeFile(w, r, fileToServePath)
 
-		} else if r.Method == http.MethodGet && r.URL.Path == "nextSearch" {
+		} else if r.Method == http.MethodGet && r.URL.Path == "/nextSearch" {
 			response := ResponseType{}
 			response.setResponseResult(result, &paginationInfo, w)
 

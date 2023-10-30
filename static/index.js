@@ -1,6 +1,7 @@
 const formElement = document.getElementById("search-form");
 const inputElement = formElement.querySelector(".search-form__input");
 const getDocsEndpoint = "/search?q=";
+const getNextDocsEndpoint = "/nextSearch";
 const getDocContentEndpoint = "/file?path=";
 const isFirstSearch = true;
 
@@ -45,6 +46,19 @@ async function getDocs(e) {
   }, 2000);
 }
 
+async function getNextDocs() {
+  const res = await fetch(getNextDocsEndpoint);
+  if (!res.ok) {
+    const errorMessage = await res.text();
+    console.error("Server error:", errorMessage);
+    return;
+  }
+
+  const data = await res.json();
+
+  renderDocs(data, false);
+}
+
 function getLinkElement(path, title) {
   const linkElement = document.createElement("a");
   linkElement.className = "search-result-container__doc-link";
@@ -54,13 +68,32 @@ function getLinkElement(path, title) {
   return linkElement;
 }
 
-function renderDocs(docs) {
+function renderDocs(docs, newSearch = true) {
   const resultContainer = document.querySelector(".search-result-container");
-  resultContainer.innerHTML = "";
+  const getNextDocsBtn = document.getElementById("next-docs-btn");
 
+  if (newSearch) {
+    resultContainer.innerHTML = "";
+  }
   docs.Result.forEach((doc) => {
-    resultContainer.appendChild(getLinkElement(doc.Path, doc.Title));
+    if (newSearch && !getNextDocsBtn) {
+      resultContainer.appendChild(getLinkElement(doc.Path, doc.Title));
+    } else {
+      getNextDocsBtn.before(getLinkElement(doc.Path, doc.Title));
+    }
   });
+
+  if (newSearch && !getNextDocsBtn) {
+    const getNextDocsBtn = document.createElement("button");
+    getNextDocsBtn.id = "next-docs-btn";
+    getNextDocsBtn.innerText = "get next docs";
+    getNextDocsBtn.addEventListener("click", getNextDocs);
+    resultContainer.appendChild(getNextDocsBtn);
+  }
+
+  if (docs.IsCompleteData && getNextDocsBtn) {
+    resultContainer.removeChild(getNextDocsBtn);
+  }
 }
 
 formElement.addEventListener("submit", getDocs);
