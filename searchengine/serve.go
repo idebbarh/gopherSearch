@@ -23,11 +23,47 @@ type ResponseType struct {
 	Result []ResultType
 }
 
+type PaginationInfo struct {
+	perRequest   int
+	currentIndex int
+}
+
+func (response *ResponseType) setResponseResult(result []ResultType, p *PaginationInfo, w http.ResponseWriter) {
+	paginationStart := p.currentIndex*p.perRequest - p.perRequest
+
+	paginationEnd := paginationStart + p.perRequest
+
+	response.Result = result[paginationStart:paginationEnd]
+
+	p.currentIndex += 1
+
+	jsonResponse, marshalErr := json.Marshal(response)
+
+	if marshalErr != nil {
+		http.Error(w, "Failed to marshal JSON", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	_, writeErr := w.Write(jsonResponse)
+
+	if writeErr != nil {
+		http.Error(w, "Failed to write response", http.StatusInternalServerError)
+	}
+}
+
 func serveHandler(filePath string) {
 	fs := http.FileServer(http.Dir("./static"))
 
+	result := []ResultType{}
+	paginationInfo := PaginationInfo{perRequest: 5, currentIndex: 1}
+
 	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet && r.URL.Path == "/search" {
+			paginationInfo.currentIndex = 1
+
 			searchQuery := lexer(strings.Join(r.URL.Query()["q"], " "))
 			loadedJsonFile, readFileErr := os.ReadFile(filePath)
 
@@ -61,34 +97,24 @@ func serveHandler(filePath string) {
 			}
 
 			rankedDocs := rankDocs(filesRank)
-			result := []ResultType{}
-			response := ResponseType{}
+
+			result = nil
 
 			for _, path := range rankedDocs {
 				result = append(result, ResultType{Path: path, Title: ftf[path].Title})
 			}
 
-			response.Result = result
+			response := ResponseType{}
 
-			jsonResponse, marshalErr := json.Marshal(response)
+			response.setResponseResult(result, &paginationInfo, w)
 
-			if marshalErr != nil {
-				http.Error(w, "Failed to marshal JSON", http.StatusInternalServerError)
-				return
-			}
-
-			w.Header().Set("Content-type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			_, writeErr := w.Write(jsonResponse)
-
-			if writeErr != nil {
-				http.Error(w, "Failed to write response", http.StatusInternalServerError)
-			}
-
-			return
 		} else if r.Method == http.MethodGet && r.URL.Path == "/file" {
 			fileToServePath := r.URL.Query().Get("path")
 			http.ServeFile(w, r, fileToServePath)
+
+		} else if r.Method == http.MethodGet && r.URL.Path == "nextSearch" {
+			response := ResponseType{}
+			response.setResponseResult(result, &paginationInfo, w)
 
 		} else {
 			fs.ServeHTTP(w, r)

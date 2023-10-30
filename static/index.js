@@ -17,25 +17,10 @@ function getDocContent(path) {
     .then((blob) => {
       const fileURL = URL.createObjectURL(blob);
       window.open(fileURL, "_blank");
+    })
+    .catch((errorMessage) => {
+      console.error("Server error:", errorMessage);
     });
-}
-
-function getLinkElement(path, title) {
-  const linkElement = document.createElement("a");
-  linkElement.className = "search-result-container__doc-link";
-  linkElement.innerText = title;
-
-  linkElement.addEventListener("click", () => getDocContent(path));
-  return linkElement;
-}
-
-function renderDocs(docs) {
-  const resultContainer = document.querySelector(".search-result-container");
-  resultContainer.innerHTML = "";
-
-  docs.Result.forEach((doc) => {
-    resultContainer.appendChild(getLinkElement(doc.Path, doc.Title));
-  });
 }
 
 async function getDocs(e) {
@@ -58,6 +43,24 @@ async function getDocs(e) {
   setTimeout(() => {
     renderDocs(data);
   }, 2000);
+}
+
+function getLinkElement(path, title) {
+  const linkElement = document.createElement("a");
+  linkElement.className = "search-result-container__doc-link";
+  linkElement.innerText = title;
+
+  linkElement.addEventListener("click", () => getDocContent(path));
+  return linkElement;
+}
+
+function renderDocs(docs) {
+  const resultContainer = document.querySelector(".search-result-container");
+  resultContainer.innerHTML = "";
+
+  docs.Result.forEach((doc) => {
+    resultContainer.appendChild(getLinkElement(doc.Path, doc.Title));
+  });
 }
 
 formElement.addEventListener("submit", getDocs);
