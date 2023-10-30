@@ -70,12 +70,16 @@ function getLinkElement(path, title) {
 
 function renderDocs(docs, newSearch = true) {
   const resultContainer = document.querySelector(".search-result-container");
+
+  if (newSearch) {
+    while (resultContainer.firstChild) {
+      resultContainer.removeChild(resultContainer.lastChild);
+    }
+  }
+
   const getNextDocsBtn = document.getElementById("next-docs-btn");
   const isCompleteData = docs.IsCompleteData;
 
-  if (newSearch) {
-    resultContainer.innerHTML = "";
-  }
   docs.Result.forEach((doc) => {
     if (!getNextDocsBtn) {
       resultContainer.appendChild(getLinkElement(doc.Path, doc.Title));
