@@ -23,10 +23,6 @@ type ResponseType struct {
 	Result []ResultType
 }
 
-type FileToServeInfo struct {
-	FilePath string `josn:"filePath"`
-}
-
 func serveHandler(filePath string) {
 	fs := http.FileServer(http.Dir("./static"))
 
@@ -90,13 +86,8 @@ func serveHandler(filePath string) {
 			}
 
 			return
-		} else if r.Method == http.MethodPost && r.URL.Path == "/file" {
-			var fileToServeInfo FileToServeInfo
-			if err := json.NewDecoder(r.Body).Decode(&fileToServeInfo); err != nil {
-				http.Error(w, "Failed to decode request body", http.StatusInternalServerError)
-			}
-
-			fileToServePath := fileToServeInfo.FilePath
+		} else if r.Method == http.MethodGet && r.URL.Path == "/file" {
+			fileToServePath := r.URL.Query().Get("path")
 			http.ServeFile(w, r, fileToServePath)
 
 		} else {

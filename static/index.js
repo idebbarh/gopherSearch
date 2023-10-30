@@ -1,6 +1,7 @@
 const formElement = document.getElementById("search-form");
 const inputElement = formElement.querySelector(".search-form__input");
-const searchEndpoint = "/search?q=";
+const getDocsEndpoint = "/search?q=";
+const getDocContentEndpoint = "/file?path=";
 const isFirstSearch = true;
 
 function animateFromMiddleToTop() {
@@ -8,24 +9,23 @@ function animateFromMiddleToTop() {
   searchContainer.classList.add("search-container--animate");
 }
 
-function getDocLink(path, title) {
+function getDocContent(path) {
+  fetch(getDocContentEndpoint + path)
+    .then((res) => {
+      return res.blob();
+    })
+    .then((blob) => {
+      const fileURL = URL.createObjectURL(blob);
+      window.open(fileURL, "_blank");
+    });
+}
+
+function getLinkElement(path, title) {
   const linkElement = document.createElement("a");
   linkElement.className = "search-result-container__doc-link";
   linkElement.innerText = title;
 
-  linkElement.addEventListener("click", (e) => {
-    fetch("/file", {
-      method: "POST",
-      body: JSON.stringify({ filePath: path }),
-    })
-      .then((res) => {
-        return res.blob();
-      })
-      .then((blob) => {
-        const fileURL = URL.createObjectURL(blob);
-        window.open(fileURL, "_blank");
-      });
-  });
+  linkElement.addEventListener("click", () => getDocContent(path));
   return linkElement;
 }
 
@@ -34,14 +34,14 @@ function renderDocs(docs) {
   resultContainer.innerHTML = "";
 
   docs.Result.forEach((doc) => {
-    resultContainer.appendChild(getDocLink(doc.Path, doc.Title));
+    resultContainer.appendChild(getLinkElement(doc.Path, doc.Title));
   });
 }
 
-async function submitHandler(e) {
+async function getDocs(e) {
   e.preventDefault();
   const searchQuery = inputElement.value.trim().split(" ").join("+");
-  const res = await fetch(searchEndpoint + searchQuery);
+  const res = await fetch(getDocsEndpoint + searchQuery);
 
   if (!res.ok) {
     const errorMessage = await res.text();
@@ -60,4 +60,4 @@ async function submitHandler(e) {
   }, 2000);
 }
 
-formElement.addEventListener("submit", submitHandler);
+formElement.addEventListener("submit", getDocs);

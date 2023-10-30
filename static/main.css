@@ -106,4 +106,5 @@ body {
 }
 .search-result-container__doc-link:hover {
   text-decoration: underline;
+  cursor: pointer;
 }
