@@ -4,13 +4,13 @@ import (
 	"math"
 )
 
-func calcTF(tf TermsFrequency, t string) float64 {
+func calcTF(tf TermsFrequency, t string, docSize int) float64 {
 	n, ok := tf[t] // term freq on specific document
 	if !ok {
 		n = 0
 	}
 
-	N := len(tf) // number of terms in specific document
+	N := docSize // number of terms in specific document
 
 	return float64(n) / float64(N)
 }

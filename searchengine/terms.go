@@ -9,8 +9,9 @@ import (
 type TermsFrequency = map[string]int
 
 type FileData struct {
-	Terms TermsFrequency
-	Title string
+	Terms   TermsFrequency
+	Title   string
+	DocSize int
 }
 
 type FilesTermsFrequency = map[string]FileData

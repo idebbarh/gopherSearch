@@ -11,7 +11,7 @@ function getDocContent(path) {
     })
     .then((blob) => {
       const fileURL = URL.createObjectURL(blob);
-      window.open(fileURL, "_blank");
+      return window.open(fileURL, "_blank");
     })
     .catch((errorMessage) => {
       console.error("Server error:", errorMessage);
@@ -58,7 +58,6 @@ function getLinkElement(path, title) {
 
 function renderDocs(docs, searchQuery, isNewSearch) {
   const resultContainer = document.querySelector(".search-result-container");
-  console.log(docs);
 
   if (isNewSearch) {
     while (resultContainer.firstChild) {

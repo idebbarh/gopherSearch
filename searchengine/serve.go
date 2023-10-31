@@ -31,6 +31,7 @@ type PaginationInfo struct {
 
 func docsResponseHandler(result []ResultType, p *PaginationInfo, w http.ResponseWriter) {
 	response := ResponseType{}
+
 	paginationStart := p.currentIndex*p.perRequest - p.perRequest
 
 	paginationEnd := paginationStart + p.perRequest
@@ -66,6 +67,7 @@ func docsResponseHandler(result []ResultType, p *PaginationInfo, w http.Response
 	}
 
 	w.Header().Set("Content-type", "application/json")
+
 	w.WriteHeader(http.StatusOK)
 
 	_, writeErr := w.Write(jsonResponse)
@@ -78,6 +80,8 @@ func docsResponseHandler(result []ResultType, p *PaginationInfo, w http.Response
 func serveHandler(filePath string) {
 	result := []ResultType{}
 	paginationInfo := PaginationInfo{}
+
+	fs := http.FileServer(http.Dir("./static"))
 
 	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet && r.URL.Path == "/search" {
@@ -95,9 +99,9 @@ func serveHandler(filePath string) {
 
 			var ftf FilesTermsFrequency
 
-			filesRank := FilesRank{}
-
 			json.Unmarshal(loadedJsonFile, &ftf)
+
+			filesRank := FilesRank{}
 
 			var termsIDFValue float64 = 0
 
@@ -108,7 +112,7 @@ func serveHandler(filePath string) {
 			for f, tf := range ftf {
 				var rank float64 = 0
 				for _, term := range searchQuery {
-					termTFValue := calcTF(tf.Terms, term)
+					termTFValue := calcTF(tf.Terms, term, tf.DocSize)
 					rank += termsIDFValue * termTFValue
 				}
 				if rank == 0 {
@@ -133,9 +137,7 @@ func serveHandler(filePath string) {
 			fileToServePath := r.URL.Query().Get("path")
 			http.ServeFile(w, r, fileToServePath)
 		} else {
-			fs := http.FileServer(http.Dir("./static"))
 			fs.ServeHTTP(w, r)
-
 		}
 	}))
 

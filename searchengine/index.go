@@ -19,7 +19,8 @@ func indexHandler(curPath string) {
 		htmlParser(fileContent, &parsedFile)
 		tf := getTermsFrequency(parsedFile)
 		docTitle := getDocTitle(fileContent)
-		ftf[f] = FileData{Terms: tf, Title: docTitle}
+
+		ftf[f] = FileData{Terms: tf, Title: docTitle, DocSize: len(tf)}
 	}
 
 	saveToJson("index.json", ftf)
