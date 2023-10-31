@@ -31,7 +31,7 @@ async function getDocs(e) {
 
   const data = await res.json();
 
-  renderDocs(data);
+  renderDocs(data, inputElement.value.trim(), true);
 }
 
 async function getNextDocs() {
@@ -44,7 +44,7 @@ async function getNextDocs() {
 
   const data = await res.json();
 
-  renderDocs(data, false);
+  renderDocs(data, inputElement.value, false);
 }
 
 function getLinkElement(path, title) {
@@ -56,12 +56,20 @@ function getLinkElement(path, title) {
   return linkElement;
 }
 
-function renderDocs(docs, newSearch = true) {
+function renderDocs(docs, searchQuery, isNewSearch) {
   const resultContainer = document.querySelector(".search-result-container");
+  console.log(docs);
 
-  if (newSearch) {
+  if (isNewSearch) {
     while (resultContainer.firstChild) {
       resultContainer.removeChild(resultContainer.lastChild);
+    }
+    if (docs.Result.length === 0) {
+      emptyResultElement = document.createElement("p");
+      emptyResultElement.innerText = `Your search - ${searchQuery} - did not match any documents.`;
+      emptyResultElement.className = "search-container__no-result";
+      resultContainer.appendChild(emptyResultElement);
+      return;
     }
   }
 

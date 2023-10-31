@@ -36,7 +36,7 @@ func docsResponseHandler(result []ResultType, p *PaginationInfo, w http.Response
 	paginationEnd := paginationStart + p.perRequest
 
 	if paginationStart >= len(result) {
-		paginationStart = len(result) - 1
+		paginationStart = max(0, len(result)-1)
 	}
 
 	if paginationEnd >= len(result) {
@@ -44,6 +44,11 @@ func docsResponseHandler(result []ResultType, p *PaginationInfo, w http.Response
 	}
 
 	response.Result = result[paginationStart:paginationEnd]
+
+	if len(response.Result) == 0 {
+		// return empty slice instead of null
+		response.Result = make([]ResultType, 0)
+	}
 
 	response.IsCompleteData = false
 
