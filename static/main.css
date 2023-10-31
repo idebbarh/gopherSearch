@@ -30,19 +30,6 @@ body {
   justify-content: center;
   flex-direction: column;
   gap: 1.2rem;
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translateX(-50%) translateY(-50%);
-}
-.search-container--animate {
-  animation: 2s ease-out gotop forwards;
-}
-@keyframes gotop {
-  to {
-    top: 1rem;
-    transform: translateX(-50%) translateY(0);
-  }
 }
 .search-container__logo > h1 {
   font-size: 4.4rem;
@@ -93,10 +80,10 @@ body {
   cursor: pointer;
 }
 .search-result-container {
-  margin-top: 170px;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  margin-top: 1rem;
 }
 .search-result-container__doc-link {
   text-decoration: none;

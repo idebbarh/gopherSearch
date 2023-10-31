@@ -3,12 +3,6 @@ const inputElement = formElement.querySelector(".search-form__input");
 const getDocsEndpoint = "/search?q=";
 const getNextDocsEndpoint = "/nextSearch";
 const getDocContentEndpoint = "/file?path=";
-const isFirstSearch = true;
-
-function animateFromMiddleToTop() {
-  const searchContainer = document.querySelector(".search-container");
-  searchContainer.classList.add("search-container--animate");
-}
 
 function getDocContent(path) {
   fetch(getDocContentEndpoint + path)
@@ -35,15 +29,9 @@ async function getDocs(e) {
     return;
   }
 
-  if (isFirstSearch) {
-    animateFromMiddleToTop();
-  }
-
   const data = await res.json();
 
-  setTimeout(() => {
-    renderDocs(data);
-  }, 2000);
+  renderDocs(data);
 }
 
 async function getNextDocs() {

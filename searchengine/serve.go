@@ -71,8 +71,6 @@ func docsResponseHandler(result []ResultType, p *PaginationInfo, w http.Response
 }
 
 func serveHandler(filePath string) {
-	fs := http.FileServer(http.Dir("./static"))
-
 	result := []ResultType{}
 	paginationInfo := PaginationInfo{}
 
@@ -124,14 +122,15 @@ func serveHandler(filePath string) {
 			}
 
 			docsResponseHandler(result, &paginationInfo, w)
-
+		} else if r.Method == http.MethodGet && r.URL.Path == "/nextSearch" {
+			docsResponseHandler(result, &paginationInfo, w)
 		} else if r.Method == http.MethodGet && r.URL.Path == "/file" {
 			fileToServePath := r.URL.Query().Get("path")
 			http.ServeFile(w, r, fileToServePath)
-		} else if r.Method == http.MethodGet && r.URL.Path == "/nextSearch" {
-			docsResponseHandler(result, &paginationInfo, w)
 		} else {
+			fs := http.FileServer(http.Dir("./static"))
 			fs.ServeHTTP(w, r)
+
 		}
 	}))
 
