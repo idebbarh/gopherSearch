@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 )
 
@@ -77,7 +76,7 @@ func docsResponseHandler(result []ResultType, p *PaginationInfo, w http.Response
 	}
 }
 
-func serveHandler(filePath string) {
+func serveHandler(inMemoryData *InMemoryData) {
 	result := []ResultType{}
 	paginationInfo := PaginationInfo{}
 
@@ -90,26 +89,16 @@ func serveHandler(filePath string) {
 			paginationInfo.currentIndex = 1
 
 			searchQuery := lexer(strings.Join(r.URL.Query()["q"], " "))
-			loadedJsonFile, readFileErr := os.ReadFile(filePath)
-
-			if readFileErr != nil {
-				http.Error(w, "Failed to open json file", http.StatusInternalServerError)
-				return
-			}
-
-			var ftf FilesTermsFrequency
-
-			json.Unmarshal(loadedJsonFile, &ftf)
 
 			filesRank := FilesRank{}
 
 			var termsIDFValue float64 = 0
 
 			for _, term := range searchQuery {
-				termsIDFValue += calcIDF(ftf, term)
+				termsIDFValue += calcIDF(inMemoryData.Df.Size, inMemoryData.Df.Value, term)
 			}
 
-			for f, tf := range ftf {
+			for f, tf := range inMemoryData.Ftf {
 				var rank float64 = 0
 				for _, term := range searchQuery {
 					termTFValue := calcTF(tf.Terms, term, tf.DocSize)
@@ -127,15 +116,17 @@ func serveHandler(filePath string) {
 			result = nil
 
 			for _, path := range rankedDocs {
-				result = append(result, ResultType{Path: path, Title: ftf[path].Title})
+				result = append(result, ResultType{Path: path, Title: inMemoryData.Ftf[path].Title})
 			}
 
 			docsResponseHandler(result, &paginationInfo, w)
 		} else if r.Method == http.MethodGet && r.URL.Path == "/nextSearch" {
 			docsResponseHandler(result, &paginationInfo, w)
 		} else if r.Method == http.MethodGet && r.URL.Path == "/file" {
+
 			fileToServePath := r.URL.Query().Get("path")
 			http.ServeFile(w, r, fileToServePath)
+
 		} else {
 			fs.ServeHTTP(w, r)
 		}

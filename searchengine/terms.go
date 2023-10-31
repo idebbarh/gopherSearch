@@ -8,16 +8,8 @@ import (
 
 type TermsFrequency = map[string]int
 
-type FileData struct {
-	Terms   TermsFrequency
-	Title   string
-	DocSize int
-}
-
-type FilesTermsFrequency = map[string]FileData
-
-func saveToJson(filename string, ftf FilesTermsFrequency) {
-	jsonData, err := json.Marshal(ftf)
+func saveToJson(filename string, inMemoryData InMemoryData) {
+	jsonData, err := json.Marshal(inMemoryData)
 	if err != nil {
 		fmt.Println("ERROR: could not convert data to json format")
 		os.Exit(1)
@@ -42,6 +34,7 @@ func getTermsFrequency(fileContent string) TermsFrequency {
 		} else {
 			tf[t] = 1
 		}
+
 	}
 	return tf
 }

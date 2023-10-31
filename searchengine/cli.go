@@ -1,6 +1,7 @@
 package searchengine
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 )
@@ -60,7 +61,18 @@ func (c Command) HandleCommand() {
 	case "index":
 		indexHandler(c.Path)
 	case "serve":
-		serveHandler(c.Path)
+		loadedJsonFile, readFileErr := os.ReadFile(c.Path)
+
+		if readFileErr != nil {
+			fmt.Println("ERROR: Failed to open json file")
+			return
+		}
+
+		var inMemoryData InMemoryData
+
+		json.Unmarshal(loadedJsonFile, &inMemoryData)
+
+		serveHandler(&inMemoryData)
 	default:
 		PrintErrorToUser(UNKOWN_SUBCOMMAND)
 	}
