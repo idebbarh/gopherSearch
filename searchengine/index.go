@@ -2,6 +2,7 @@ package searchengine
 
 import (
 	"fmt"
+	"strings"
 )
 
 type FileData struct {
@@ -62,5 +63,9 @@ func indexHandler(curPath string) {
 
 	inMemoryData := InMemoryData{Ftf: ftf, Df: df}
 
-	saveToJson("index.json", inMemoryData)
+	pathParts := strings.Split(curPath, "/")
+
+	indexFileName := pathParts[len(pathParts)-1] + ".index.json"
+
+	saveToJson(indexFileName, inMemoryData)
 }
