@@ -4,15 +4,21 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
+
+type FileInfo struct {
+	filePath       string
+	lastUpdateTime time.Time
+}
 
 func getFileContent(filePath string) (string, error) {
 	fileContent, err := os.ReadFile(filePath)
 	return string(fileContent), err
 }
 
-func getPathFiles(curPath string) []string {
-	curFiles := []string{}
+func getPathFiles(curPath string) []FileInfo {
+	curFiles := []FileInfo{}
 	fi, err := os.Stat(curPath)
 	if err != nil {
 		fmt.Printf("ERROR: Could not get info of %s : %v", curPath, err)
@@ -21,15 +27,16 @@ func getPathFiles(curPath string) []string {
 	mode := fi.Mode()
 
 	if mode.IsRegular() {
-		res := []string{}
+		res := []FileInfo{}
 
 		pathParts := strings.Split(curPath, "/")
 		lastPart := pathParts[len(pathParts)-1]
 		lastPartParts := strings.Split(lastPart, ".")
 
 		if len(lastPartParts) >= 2 && lastPartParts[len(lastPartParts)-1] == "html" {
-			res = append(res, curPath)
+			res = append(res, FileInfo{filePath: curPath, lastUpdateTime: fi.ModTime()})
 		}
+
 		return res
 	} else if mode.IsDir() {
 		entries, err := os.ReadDir(curPath)
@@ -42,7 +49,7 @@ func getPathFiles(curPath string) []string {
 			curFiles = append(curFiles, getPathFiles(curPath+"/"+l.Name())...)
 		}
 	} else {
-		return []string{}
+		return []FileInfo{}
 	}
 	return curFiles
 }

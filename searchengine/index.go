@@ -3,6 +3,7 @@ package searchengine
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 type FileData struct {
@@ -12,6 +13,8 @@ type FileData struct {
 	Title string
 	// number of terms in the doc
 	DocSize int
+	// last update time
+	LastUpdateTime time.Time
 }
 
 type FilesTermsFrequency = map[string]FileData
@@ -28,40 +31,41 @@ type InMemoryData struct {
 	Df  DocumentFrequency
 }
 
-func indexHandler(curPath string) {
+func indexHandler(curPath string, inMemoryData *InMemoryData) {
 	files := getPathFiles(curPath)
 	ftf := FilesTermsFrequency{}
 	df := DocumentFrequency{Size: 0, Value: map[string]int{}}
 
 	for _, f := range files {
-		fmt.Printf("indexing %s....\n", f)
-		fileContent, err := getFileContent(f)
+		fmt.Printf("indexing %s....\n", f.filePath)
+		fileContent, err := getFileContent(f.filePath)
 		if err != nil {
-			fmt.Printf("ERROR: Could not read file %s : %v", f, err)
+			fmt.Printf("ERROR: Could not read file %s : %v", f.filePath, err)
 			continue
+		}
+
+		v, ok := ftf[f.filePath]
+		if ok {
+			if v.LastUpdateTime.Equal(f.lastUpdateTime) {
+				fmt.Printf("ignoring %s....\n", f.filePath)
+				continue
+			}
 		}
 
 		var parsedFile string
 		htmlParser(fileContent, &parsedFile)
+
+		removeDocumentFrequency(&df, ftf, f)
+
 		tf := getTermsFrequency(parsedFile)
 		docTitle := getDocTitle(fileContent)
+		ftf[f.filePath] = FileData{Terms: tf, Title: docTitle, DocSize: len(tf), LastUpdateTime: f.lastUpdateTime}
 
-		ftf[f] = FileData{Terms: tf, Title: docTitle, DocSize: len(tf)}
-
-		for t := range tf {
-			_, ok := df.Value[t]
-			if ok {
-				df.Value[t] += 1
-			} else {
-				df.Value[t] = 1
-			}
-
-		}
-
-		df.Size += 1
+		getDocumentFrequency(&df, tf)
 	}
 
-	inMemoryData := InMemoryData{Ftf: ftf, Df: df}
+	inMemoryData.Ftf = ftf
+	inMemoryData.Df = df
 
 	pathParts := strings.Split(curPath, "/")
 

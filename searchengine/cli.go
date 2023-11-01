@@ -59,7 +59,18 @@ func PrintUsage() {
 func (c Command) HandleCommand() {
 	switch c.Subcommand {
 	case "index":
-		indexHandler(c.Path)
+		// loadedJsonFile, readFileErr := os.ReadFile(c.Path)
+		//
+		// if readFileErr != nil {
+		// 	fmt.Println("ERROR: Failed to open json file")
+		// 	return
+		// }
+
+		inMemoryData := InMemoryData{}
+
+		// json.Unmarshal(loadedJsonFile, &inMemoryData)
+
+		indexHandler(c.Path, &inMemoryData)
 	case "serve":
 		loadedJsonFile, readFileErr := os.ReadFile(c.Path)
 
