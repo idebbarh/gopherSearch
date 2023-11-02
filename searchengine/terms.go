@@ -8,8 +8,8 @@ import (
 
 type TermsFrequency = map[string]int
 
-func saveToJson(filename string, inMemoryData *InMemoryData) {
-	jsonData, err := json.Marshal(*inMemoryData)
+func saveToJson(filename string, inMemoryData InMemoryData) {
+	jsonData, err := json.Marshal(inMemoryData)
 	if err != nil {
 		fmt.Println("ERROR: could not convert data to json format")
 		os.Exit(1)

@@ -2,7 +2,6 @@ package searchengine
 
 import (
 	"fmt"
-	"strings"
 	"time"
 )
 
@@ -33,18 +32,10 @@ type InMemoryData struct {
 
 func indexHandler(curPath string, inMemoryData *InMemoryData) {
 	files := getPathFiles(curPath)
-	ftf := FilesTermsFrequency{}
-	df := DocumentFrequency{Size: 0, Value: map[string]int{}}
 
 	for _, f := range files {
-		fmt.Printf("indexing %s....\n", f.filePath)
-		fileContent, err := getFileContent(f.filePath)
-		if err != nil {
-			fmt.Printf("ERROR: Could not read file %s : %v", f.filePath, err)
-			continue
-		}
+		v, ok := inMemoryData.Ftf[f.filePath]
 
-		v, ok := ftf[f.filePath]
 		if ok {
 			if v.LastUpdateTime.Equal(f.lastUpdateTime) {
 				fmt.Printf("ignoring %s....\n", f.filePath)
@@ -52,24 +43,24 @@ func indexHandler(curPath string, inMemoryData *InMemoryData) {
 			}
 		}
 
+		fmt.Printf("indexing %s....\n", f.filePath)
+
+		fileContent, err := getFileContent(f.filePath)
+		if err != nil {
+			fmt.Printf("ERROR: Could not read file %s : %v", f.filePath, err)
+			continue
+		}
+
 		var parsedFile string
+
 		htmlParser(fileContent, &parsedFile)
 
-		removeDocumentFrequency(&df, ftf, f)
+		removeDocumentFrequency(&inMemoryData.Df, inMemoryData.Ftf, f)
 
 		tf := getTermsFrequency(parsedFile)
 		docTitle := getDocTitle(fileContent)
-		ftf[f.filePath] = FileData{Terms: tf, Title: docTitle, DocSize: len(tf), LastUpdateTime: f.lastUpdateTime}
+		inMemoryData.Ftf[f.filePath] = FileData{Terms: tf, Title: docTitle, DocSize: len(tf), LastUpdateTime: f.lastUpdateTime}
 
-		getDocumentFrequency(&df, tf)
+		getDocumentFrequency(&inMemoryData.Df, tf)
 	}
-
-	inMemoryData.Ftf = ftf
-	inMemoryData.Df = df
-
-	pathParts := strings.Split(curPath, "/")
-
-	indexFileName := pathParts[len(pathParts)-1] + ".index.json"
-
-	saveToJson(indexFileName, inMemoryData)
 }

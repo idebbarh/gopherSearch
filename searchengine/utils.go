@@ -3,6 +3,7 @@ package searchengine
 import (
 	"errors"
 	"sort"
+	"strings"
 )
 
 type Pair struct {
@@ -39,6 +40,12 @@ func rankDocs(f FilesRank) []string {
 	}
 
 	return docs
+}
+
+func getIndexFileNameFromPath(path string) string {
+	pathParts := strings.Split(path, "/")
+
+	return pathParts[len(pathParts)-1] + ".index.json"
 }
 
 func assert(condition bool, message string) {
