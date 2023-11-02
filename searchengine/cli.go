@@ -65,9 +65,22 @@ func (c Command) HandleCommand() {
 		// indexHandler(c.Path, &inMemoryData)
 		// saveToJson(indexFileName, inMemoryData)
 	case "serve":
+		inMemoryDataChan := make(chan InMemoryData)
 		var inMemoryData InMemoryData
-
 		indexFileName := getIndexFileNameFromPath(c.Path)
+		go func() {
+			for {
+				select {
+				case inMemoryData := <-inMemoryDataChan:
+					// Handle received inMemoryData
+					fmt.Println("Received updated inMemoryData:", inMemoryData)
+					// Process the received data, if needed
+				default:
+					// Do other tasks or just wait for data
+				}
+			}
+		}()
+
 		if _, stateError := os.Stat(indexFileName); stateError == nil {
 			fmt.Println("Reindexing...")
 			loadedJsonFile, readFileErr := os.ReadFile(indexFileName)
@@ -79,6 +92,8 @@ func (c Command) HandleCommand() {
 
 			json.Unmarshal(loadedJsonFile, &inMemoryData)
 
+			inMemoryDataChan <- inMemoryData
+
 		} else if errors.Is(stateError, os.ErrNotExist) {
 			ftf := FilesTermsFrequency{}
 			df := DocumentFrequency{Size: 0, Value: map[string]int{}}
@@ -89,11 +104,21 @@ func (c Command) HandleCommand() {
 			return
 		}
 
-		indexHandler(c.Path, &inMemoryData)
+		go indexHandler(c.Path, inMemoryData, inMemoryDataChan)
 
-		saveToJson(indexFileName, inMemoryData)
+		serveHandler(inMemoryDataChan)
 
-		serveHandler(&inMemoryData)
+		// go indexHandler(c.Path, inMemoryDataChan)
+
+		// updatedInMemoryData := <-inMemoryDataChan
+		//
+		// saveToJson(indexFileName, updatedInMemoryData)
+
+		// for {
+		// 	updatedInMemoryData := <-inMemoryDataChan
+		// 	fmt.Println(updatedInMemoryData.Df.Size)
+		// }
+
 	default:
 		PrintErrorToUser(UNKOWN_SUBCOMMAND)
 	}

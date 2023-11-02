@@ -30,7 +30,8 @@ type InMemoryData struct {
 	Df  DocumentFrequency
 }
 
-func indexHandler(curPath string, inMemoryData *InMemoryData) {
+func indexHandler(curPath string, inMemoryData InMemoryData, inMemoryDataChan chan InMemoryData) {
+	fmt.Println("index")
 	files := getPathFiles(curPath)
 
 	for _, f := range files {
@@ -62,5 +63,7 @@ func indexHandler(curPath string, inMemoryData *InMemoryData) {
 		inMemoryData.Ftf[f.filePath] = FileData{Terms: tf, Title: docTitle, DocSize: len(tf), LastUpdateTime: f.lastUpdateTime}
 
 		getDocumentFrequency(&inMemoryData.Df, tf)
+
+		inMemoryDataChan <- inMemoryData
 	}
 }
