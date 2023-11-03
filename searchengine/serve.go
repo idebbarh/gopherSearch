@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 )
 
 type SearchQuery struct {
@@ -76,7 +77,9 @@ func docsResponseHandler(result []ResultType, p *PaginationInfo, w http.Response
 	}
 }
 
-func serveHandler(inMemoryData *InMemoryData) {
+func serveHandler(inMemoryData *InMemoryData, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	result := []ResultType{}
 	paginationInfo := PaginationInfo{}
 	fs := http.FileServer(http.Dir("./static"))

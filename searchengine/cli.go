@@ -80,8 +80,11 @@ func (c Command) HandleCommand() {
 		// saveToJson(indexFileName, inMemoryData)
 	case "serve":
 		var inMemoryData InMemoryData
-		var wg sync.WaitGroup
-		wg.Add(1)
+		var indexingWG sync.WaitGroup
+		var serverWG sync.WaitGroup
+
+		indexingWG.Add(1)
+		serverWG.Add(1)
 
 		indexFileName := getIndexFileNameFromPath(c.Path)
 
@@ -106,14 +109,17 @@ func (c Command) HandleCommand() {
 			return
 		}
 
-		go indexHandler(c.Path, &inMemoryData, &wg)
+		go indexHandler(c.Path, &inMemoryData, &indexingWG)
 
-		go serveHandler(&inMemoryData)
+		go serveHandler(&inMemoryData, &serverWG)
 
-		wg.Wait()
+		// wait for indexing to finish then save data to json
+		indexingWG.Wait()
 
 		saveToJson(indexFileName, inMemoryData)
 
+		// wait for the server to finish then exit the program
+		serverWG.Wait()
 	default:
 		PrintErrorToUser(UNKOWN_SUBCOMMAND)
 	}
