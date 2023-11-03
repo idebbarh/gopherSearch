@@ -2,6 +2,7 @@ package searchengine
 
 import (
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -16,25 +17,10 @@ type FileData struct {
 	LastUpdateTime time.Time
 }
 
-type FilesTermsFrequency = map[string]FileData
+func indexHandler(curPath string, inMemoryData *InMemoryData, wg *sync.WaitGroup) {
+	defer wg.Done()
 
-type DocumentFrequency struct {
-	// each term and number of documents appear in
-	Value map[string]int
-	// total document
-	Size int
-}
-
-type InMemoryData struct {
-	Ftf FilesTermsFrequency
-	Df  DocumentFrequency
-}
-
-func indexHandler(curPath string, inMemoryData InMemoryData, inMemoryDataChan chan InMemoryData) {
-	fmt.Println("index")
-	files := getPathFiles(curPath)
-
-	for _, f := range files {
+	for _, f := range getPathFiles(curPath) {
 		v, ok := inMemoryData.Ftf[f.filePath]
 
 		if ok {
@@ -63,7 +49,5 @@ func indexHandler(curPath string, inMemoryData InMemoryData, inMemoryDataChan ch
 		inMemoryData.Ftf[f.filePath] = FileData{Terms: tf, Title: docTitle, DocSize: len(tf), LastUpdateTime: f.lastUpdateTime}
 
 		getDocumentFrequency(&inMemoryData.Df, tf)
-
-		inMemoryDataChan <- inMemoryData
 	}
 }

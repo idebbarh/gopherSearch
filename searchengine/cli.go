@@ -5,8 +5,22 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sync"
 )
 
+type FilesTermsFrequency = map[string]FileData
+
+type DocumentFrequency struct {
+	// each term and number of documents appear in
+	Value map[string]int
+	// total document
+	Size int
+}
+
+type InMemoryData struct {
+	Ftf FilesTermsFrequency
+	Df  DocumentFrequency
+}
 type Command struct {
 	Subcommand string
 	Path       string
@@ -65,24 +79,14 @@ func (c Command) HandleCommand() {
 		// indexHandler(c.Path, &inMemoryData)
 		// saveToJson(indexFileName, inMemoryData)
 	case "serve":
-		inMemoryDataChan := make(chan InMemoryData)
 		var inMemoryData InMemoryData
+		var wg sync.WaitGroup
+		wg.Add(1)
+
 		indexFileName := getIndexFileNameFromPath(c.Path)
-		go func() {
-			for {
-				select {
-				case inMemoryData := <-inMemoryDataChan:
-					// Handle received inMemoryData
-					fmt.Println("Received updated inMemoryData:", inMemoryData)
-					// Process the received data, if needed
-				default:
-					// Do other tasks or just wait for data
-				}
-			}
-		}()
 
 		if _, stateError := os.Stat(indexFileName); stateError == nil {
-			fmt.Println("Reindexing...")
+			fmt.Println("Looking for new or changed files to reindex...")
 			loadedJsonFile, readFileErr := os.ReadFile(indexFileName)
 
 			if readFileErr != nil {
@@ -92,32 +96,24 @@ func (c Command) HandleCommand() {
 
 			json.Unmarshal(loadedJsonFile, &inMemoryData)
 
-			inMemoryDataChan <- inMemoryData
-
 		} else if errors.Is(stateError, os.ErrNotExist) {
+			fmt.Println("First time Indexing...")
 			ftf := FilesTermsFrequency{}
 			df := DocumentFrequency{Size: 0, Value: map[string]int{}}
 			inMemoryData = InMemoryData{Ftf: ftf, Df: df}
-			fmt.Println("Indexing...")
 		} else {
 			fmt.Printf("ERROR: file may or may not exist:%v\n", stateError)
 			return
 		}
 
-		go indexHandler(c.Path, inMemoryData, inMemoryDataChan)
+		go indexHandler(c.Path, &inMemoryData, &wg)
 
-		serveHandler(inMemoryDataChan)
+		go serveHandler(&inMemoryData)
 
-		// go indexHandler(c.Path, inMemoryDataChan)
+		wg.Wait()
 
-		// updatedInMemoryData := <-inMemoryDataChan
-		//
-		// saveToJson(indexFileName, updatedInMemoryData)
-
-		// for {
-		// 	updatedInMemoryData := <-inMemoryDataChan
-		// 	fmt.Println(updatedInMemoryData.Df.Size)
-		// }
+		fmt.Println("Indexing is done!")
+		// saveToJson(indexFileName, inMemoryData)
 
 	default:
 		PrintErrorToUser(UNKOWN_SUBCOMMAND)
