@@ -112,8 +112,7 @@ func (c Command) HandleCommand() {
 
 		wg.Wait()
 
-		fmt.Println("Indexing is done!")
-		// saveToJson(indexFileName, inMemoryData)
+		saveToJson(indexFileName, inMemoryData)
 
 	default:
 		PrintErrorToUser(UNKOWN_SUBCOMMAND)
