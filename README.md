@@ -8,6 +8,8 @@ To install GopherSearch, make sure you have GoLang installed on your machine. Yo
 
 ```bash
 git clone https://github.com/yourusername/gophersearch.git
+cd gopherSearch
+go build main.go
 ```
 
 ## Usage
@@ -15,7 +17,7 @@ git clone https://github.com/yourusername/gophersearch.git
 To index the HTML files and serve the local server, use the following command:
 
 ```bash
-gophersearch serve <path_to_folder>
+./main serve <path_to_folder>
 ```
 
 Replace <path_to_folder> with the path to the folder containing the HTML files you want to index.
