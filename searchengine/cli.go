@@ -29,34 +29,22 @@ type Command struct {
 const (
 	NO_SUBCOMMAND = iota
 	NO_PATH_TO_INDEX
-	NO_FILE_TO_SERVE
 	UNKOWN_SUBCOMMAND
 	TOTAL_ERRORS
 )
 
 func PrintErrorToUser(errorType int) {
-	assert(TOTAL_ERRORS == 4, "You are not handling all error types")
+	assert(TOTAL_ERRORS == 3, "You are not handling all error types")
 	switch errorType {
 	case NO_SUBCOMMAND:
 		fmt.Println("ERROR: You must provide a subcommand.")
-		fmt.Println("Usage: program <subcommand> [arguments]")
-		fmt.Println("Subcommands:")
-		fmt.Println("  index  <path_to_files>  - Index the files.")
-		fmt.Println("  serve <path_to_file>   - Serve the indexed files.")
-
-	case NO_FILE_TO_SERVE:
-		fmt.Println("ERROR: You must provide the path to the indexed file to serve.")
-		fmt.Println("Usage: program serve <path_to_file>")
-
+		PrintUsage()
 	case NO_PATH_TO_INDEX:
 		fmt.Println("ERROR: you must provide a path to the file or directory to index.")
-		fmt.Println("Usage: program index <path_to_file_or_folder>")
+		PrintUsage()
 	case UNKOWN_SUBCOMMAND:
 		fmt.Println("ERROR: Unknown subcommand")
-		fmt.Println("Usage: program <subcommand> [arguments]")
-		fmt.Println("Subcommands:")
-		fmt.Println("  index  <path_to_files>  - Index the files.")
-		fmt.Println("  serve <path_to_file>   - Serve the indexed files.")
+		PrintUsage()
 	default:
 		fmt.Println("ERROR: Unknown error")
 	}
@@ -67,17 +55,11 @@ func PrintErrorToUser(errorType int) {
 func PrintUsage() {
 	fmt.Println("Usage: program <subcommand> [arguments]")
 	fmt.Println("Subcommands:")
-	fmt.Println("  index  <path_to_files>  - Index the files.")
-	fmt.Println("  serve <path_to_file>   - Serve the indexed files.")
+	fmt.Println("  serve <path_to_folder>   - Index and serve the folder.")
 }
 
 func (c Command) HandleCommand() {
 	switch c.Subcommand {
-	case "index":
-		// indexFileName := getIndexFileNameFromPath(c.Path)
-		// inMemoryData := InMemoryData{}
-		// indexHandler(c.Path, &inMemoryData)
-		// saveToJson(indexFileName, inMemoryData)
 	case "serve":
 		var inMemoryData InMemoryData
 		var indexingWG sync.WaitGroup

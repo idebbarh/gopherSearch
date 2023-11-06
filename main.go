@@ -15,17 +15,16 @@ func main() {
 
 	args = args[1:]
 
-	if (args[0]) == "help" {
+	subcommand := args[0]
+
+	if (subcommand) == "help" {
 		se.PrintUsage()
 		os.Exit(0)
 	}
 
 	if len(args) < 2 {
-		subcommand := args[0]
-		if subcommand == "index" {
+		if subcommand == "serve" {
 			se.PrintErrorToUser(se.NO_PATH_TO_INDEX)
-		} else if subcommand == "serve" {
-			se.PrintErrorToUser(se.NO_FILE_TO_SERVE)
 		} else {
 			se.PrintErrorToUser(se.UNKOWN_SUBCOMMAND)
 		}
