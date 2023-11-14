@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"sync"
+	"time"
 )
 
 type FilesTermsFrequency = map[string]FileData
@@ -25,6 +27,13 @@ type Command struct {
 	Subcommand string
 	Path       string
 }
+
+type Entry struct {
+	Size int
+	Info fs.FileInfo
+}
+
+type EntriesInfo = map[string]*Entry
 
 const (
 	NO_SUBCOMMAND = iota
@@ -87,9 +96,37 @@ func (c Command) HandleCommand() {
 			df := DocumentFrequency{Size: 0, Value: map[string]int{}}
 			inMemoryData = InMemoryData{Ftf: ftf, Df: df}
 		} else {
-			fmt.Printf("ERROR: file may or may not exist:%v\n", stateError)
+			fmt.Printf("ERROR: file may or may not exist: %v\n", stateError)
 			return
 		}
+
+		go func() {
+			fi, err := os.Stat(c.Path)
+			if err != nil {
+				fmt.Printf("ERROR: Could not get info of %s : %v", c.Path, err)
+				os.Exit(1)
+			}
+
+			mode := fi.Mode()
+
+			if !mode.IsDir() {
+				fmt.Printf("Error: could not listener to this path because its not a folder")
+				os.Exit(1)
+			}
+			prevEntries, err := os.ReadDir(c.Path)
+			if err != nil {
+				fmt.Printf("Error: could not get the entries of: %s: %s", c.Path, err)
+				os.Exit(1)
+			}
+
+			fmt.Printf("listening on : %s\n", c.Path)
+
+			prevFolderEntries := getEntriesInfo(c.Path, prevEntries)
+			for {
+				folderListener(c.Path, &prevFolderEntries)
+				time.Sleep(1 * time.Second)
+			}
+		}()
 
 		go indexHandler(c.Path, &inMemoryData, &indexingWG)
 
