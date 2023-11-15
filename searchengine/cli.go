@@ -33,7 +33,9 @@ type Entry struct {
 	Info fs.FileInfo
 }
 
-type EntriesInfo = map[string]*Entry
+type FolderEntriesInfo = map[string]*Entry
+
+type FolderEntries = map[string][]fs.DirEntry
 
 const (
 	NO_SUBCOMMAND = iota
@@ -101,9 +103,15 @@ func (c Command) HandleCommand() {
 		}
 
 		go func() {
-			fi, err := os.Stat(c.Path)
+			watchingPath, err := os.Getwd()
 			if err != nil {
-				fmt.Printf("ERROR: Could not get info of %s : %v", c.Path, err)
+				return
+			}
+			watchingPath += "/" + "testListener"
+
+			fi, err := os.Stat(watchingPath)
+			if err != nil {
+				fmt.Printf("ERROR: Could not get info of %s : %v", watchingPath, err)
 				os.Exit(1)
 			}
 
@@ -111,19 +119,31 @@ func (c Command) HandleCommand() {
 
 			if !mode.IsDir() {
 				fmt.Printf("Error: could not listener to this path because its not a folder")
-				os.Exit(1)
+				return
 			}
-			prevEntries, err := os.ReadDir(c.Path)
+
+			prevEntries, err := os.ReadDir(watchingPath)
 			if err != nil {
-				fmt.Printf("Error: could not get the entries of: %s: %s", c.Path, err)
+				fmt.Printf("Error: could not get the entries of: %s: %s", watchingPath, err)
 				os.Exit(1)
 			}
 
-			fmt.Printf("listening on : %s\n", c.Path)
+			fmt.Printf("listening on : %s\n", watchingPath)
 
-			prevFolderEntries := getEntriesInfo(c.Path, prevEntries)
+			folderEntriesInfo := FolderEntriesInfo{}
+
+			getFolderEntriesInfo(watchingPath, prevEntries, folderEntriesInfo)
+
 			for {
-				folderListener(c.Path, &prevFolderEntries)
+				folderEntries := FolderEntries{}
+				getFolderEntries(watchingPath, folderEntries)
+
+				isSomethingChange := folderListener(watchingPath, &folderEntriesInfo, folderEntries[watchingPath], folderEntries)
+
+				if isSomethingChange {
+					getFolderEntriesInfo(watchingPath, folderEntries[watchingPath], folderEntriesInfo)
+				}
+
 				time.Sleep(1 * time.Second)
 			}
 		}()

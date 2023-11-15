@@ -55,9 +55,7 @@ func getPathFiles(curPath string) []FileInfo {
 	return curFiles
 }
 
-func getEntriesInfo(curPath string, entries []fs.DirEntry) EntriesInfo {
-	entriesInfo := EntriesInfo{}
-
+func getFolderEntriesInfo(curPath string, entries []fs.DirEntry, entriesInfo FolderEntriesInfo) {
 	if entriesInfo[curPath] == nil {
 		entriesInfo[curPath] = &Entry{}
 	}
@@ -77,48 +75,81 @@ func getEntriesInfo(curPath string, entries []fs.DirEntry) EntriesInfo {
 				fmt.Printf("Error: could not get the entries of: %s: %s", newPath, err)
 				os.Exit(1)
 			}
-			getEntriesInfo(newPath, newEntries)
+			getFolderEntriesInfo(newPath, newEntries, entriesInfo)
 			continue
 		}
+
+		if entriesInfo[curPath+"/"+entryInfo.Name()] == nil {
+			entriesInfo[curPath+"/"+entryInfo.Name()] = &Entry{}
+		}
+
 		entriesInfo[curPath+"/"+entryInfo.Name()].Info = entryInfo
 	}
-	return entriesInfo
 }
 
-func folderListener(watchingPath string, prevFolderEntries *EntriesInfo) {
-	newFolderEntries, err := os.ReadDir(watchingPath)
+func getFolderEntries(curPath string, folderEntries FolderEntries) {
+	curEntries, err := os.ReadDir(curPath)
 	if err != nil {
-		fmt.Printf("Error: could not get the entries of: %s: %s", watchingPath, err)
+		fmt.Printf("Error: could not get the entries of: %s: %s", curPath, err)
 		os.Exit(1)
 	}
 
-	if len(newFolderEntries) < (*prevFolderEntries)[watchingPath].Size {
+	folderEntries[curPath] = curEntries
+
+	for _, entry := range curEntries {
+		entryInfo, err := entry.Info()
+		if err != nil {
+			fmt.Printf("ERROR: Could not get info of %s : %v", entry.Name(), err)
+			os.Exit(1)
+		}
+
+		if entryInfo.IsDir() {
+			getFolderEntries(curPath+"/"+entryInfo.Name(), folderEntries)
+		}
+	}
+}
+
+// TODO: replace the logs with a better way of notify the user if something changed
+func folderListener(watchingPath string, folderEntriesInfo *FolderEntriesInfo, curEntries []fs.DirEntry, folderEntries FolderEntries) bool {
+	if len(curEntries) < (*folderEntriesInfo)[watchingPath].Size {
+		// TODO: print the created file of folder
 		fmt.Printf("warning: folder or file was deleted inside %s\n", watchingPath)
-		*prevFolderEntries = getEntriesInfo(watchingPath, newFolderEntries)
-	} else if len(newFolderEntries) > (*prevFolderEntries)[watchingPath].Size {
+		return true
+	}
+
+	if len(curEntries) > (*folderEntriesInfo)[watchingPath].Size {
+		// TODO: print the deleted file or folder
 		fmt.Printf("warning: folder or file was created inside %s\n", watchingPath)
-		*prevFolderEntries = getEntriesInfo(watchingPath, newFolderEntries)
-	} else if len(newFolderEntries) == (*prevFolderEntries)[watchingPath].Size {
-		for _, curNewFileState := range newFolderEntries {
-			curNewFileInfo, err := curNewFileState.Info()
+		return true
+	}
+
+	if len(curEntries) == (*folderEntriesInfo)[watchingPath].Size {
+		for _, curEntry := range curEntries {
+			curEntryInfo, err := curEntry.Info()
 			if err != nil {
-				fmt.Printf("ERROR: Could not get info of %s : %v", curNewFileState.Name(), err)
+				fmt.Printf("ERROR: Could not get info of %s : %v", curEntry.Name(), err)
 				os.Exit(1)
 			}
 
-			curNewFileMode := curNewFileInfo.Mode()
+			curNewFileMode := curEntryInfo.Mode()
 
 			if curNewFileMode.IsDir() {
-				folderListener(watchingPath+"/"+curNewFileInfo.Name(), prevFolderEntries)
-				continue
-			}
+				nextWatchingPath := watchingPath + "/" + curEntry.Name()
+				isSomethingChange := folderListener(nextWatchingPath, folderEntriesInfo, folderEntries[nextWatchingPath], folderEntries)
+				if isSomethingChange {
+					return true
+				}
 
-			curPrevFileInfo := (*prevFolderEntries)[watchingPath+"/"+curNewFileInfo.Name()]
-
-			if !curPrevFileInfo.Info.ModTime().Equal(curNewFileInfo.ModTime()) {
-				fmt.Printf("warning: %s/%s content is updated\n", watchingPath, curPrevFileInfo.Info.Name())
-				*prevFolderEntries = getEntriesInfo(watchingPath, newFolderEntries)
+			} else {
+				// TODO: handle file name changed
+				prevEntryInfo := (*folderEntriesInfo)[watchingPath+"/"+curEntryInfo.Name()]
+				if !prevEntryInfo.Info.ModTime().Equal(curEntryInfo.ModTime()) {
+					fmt.Printf("warning: %s/%s content is updated\n", watchingPath, prevEntryInfo.Info.Name())
+					return true
+				}
 			}
 		}
 	}
+
+	return false
 }
