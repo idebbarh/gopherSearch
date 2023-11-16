@@ -28,14 +28,13 @@ type Command struct {
 	Path       string
 }
 
-type Entry struct {
-	Size int
-	Info fs.FileInfo
+type DirInfo struct {
+	Entries []string
+	Info    fs.FileInfo
+	isDir   bool
 }
 
-type FolderEntriesInfo = map[string]*Entry
-
-type FolderEntries = map[string][]fs.DirEntry
+type FolderEntriesInfo = map[string]*DirInfo
 
 const (
 	NO_SUBCOMMAND = iota
@@ -122,26 +121,19 @@ func (c Command) HandleCommand() {
 				return
 			}
 
-			prevEntries, err := os.ReadDir(watchingPath)
-			if err != nil {
-				fmt.Printf("Error: could not get the entries of: %s: %s", watchingPath, err)
-				os.Exit(1)
-			}
-
 			fmt.Printf("listening on : %s\n", watchingPath)
 
-			folderEntriesInfo := FolderEntriesInfo{}
-
-			getFolderEntriesInfo(watchingPath, prevEntries, folderEntriesInfo)
+			prevFolderEntriesInfo := FolderEntriesInfo{}
+			getFolderEntriesInfo(watchingPath, prevFolderEntriesInfo)
 
 			for {
-				folderEntries := FolderEntries{}
-				getFolderEntries(watchingPath, folderEntries)
+				curFolderEntriesInfo := FolderEntriesInfo{}
+				getFolderEntriesInfo(watchingPath, curFolderEntriesInfo)
 
-				isSomethingChange := folderListener(watchingPath, &folderEntriesInfo, folderEntries[watchingPath], folderEntries)
+				isSomethingChange := folderListener(watchingPath, prevFolderEntriesInfo, curFolderEntriesInfo)
 
 				if isSomethingChange {
-					getFolderEntriesInfo(watchingPath, folderEntries[watchingPath], folderEntriesInfo)
+					getFolderEntriesInfo(watchingPath, prevFolderEntriesInfo)
 				}
 
 				time.Sleep(1 * time.Second)

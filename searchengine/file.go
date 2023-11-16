@@ -2,7 +2,6 @@ package searchengine
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"strings"
 	"time"
@@ -55,12 +54,19 @@ func getPathFiles(curPath string) []FileInfo {
 	return curFiles
 }
 
-func getFolderEntriesInfo(curPath string, entries []fs.DirEntry, entriesInfo FolderEntriesInfo) {
-	if entriesInfo[curPath] == nil {
-		entriesInfo[curPath] = &Entry{}
+func getFolderEntriesInfo(curPath string, entriesInfo FolderEntriesInfo) {
+	entries, err := os.ReadDir(curPath)
+	if err != nil {
+		fmt.Printf("Error: could not get the entries of: %s: %s", curPath, err)
+		os.Exit(1)
 	}
 
-	entriesInfo[curPath].Size = len(entries)
+	if entriesInfo[curPath] == nil {
+		entriesInfo[curPath] = &DirInfo{}
+	}
+
+	entriesInfo[curPath].Entries = []string{}
+	entriesInfo[curPath].isDir = true
 
 	for _, e := range entries {
 		entryInfo, err := e.Info()
@@ -68,83 +74,54 @@ func getFolderEntriesInfo(curPath string, entries []fs.DirEntry, entriesInfo Fol
 			fmt.Printf("ERROR: Could not get info of %s : %v", e.Name(), err)
 			os.Exit(1)
 		}
+
+		entryPath := curPath + "/" + entryInfo.Name()
+
+		entriesInfo[curPath].Entries = append(entriesInfo[curPath].Entries, entryPath)
+
 		if entryInfo.IsDir() {
-			newPath := curPath + "/" + entryInfo.Name()
-			newEntries, err := os.ReadDir(newPath)
-			if err != nil {
-				fmt.Printf("Error: could not get the entries of: %s: %s", newPath, err)
-				os.Exit(1)
-			}
-			getFolderEntriesInfo(newPath, newEntries, entriesInfo)
+			getFolderEntriesInfo(entryPath, entriesInfo)
 			continue
 		}
 
-		if entriesInfo[curPath+"/"+entryInfo.Name()] == nil {
-			entriesInfo[curPath+"/"+entryInfo.Name()] = &Entry{}
+		if entriesInfo[entryPath] == nil {
+			entriesInfo[entryPath] = &DirInfo{}
 		}
 
-		entriesInfo[curPath+"/"+entryInfo.Name()].Info = entryInfo
-	}
-}
-
-func getFolderEntries(curPath string, folderEntries FolderEntries) {
-	curEntries, err := os.ReadDir(curPath)
-	if err != nil {
-		fmt.Printf("Error: could not get the entries of: %s: %s", curPath, err)
-		os.Exit(1)
-	}
-
-	folderEntries[curPath] = curEntries
-
-	for _, entry := range curEntries {
-		entryInfo, err := entry.Info()
-		if err != nil {
-			fmt.Printf("ERROR: Could not get info of %s : %v", entry.Name(), err)
-			os.Exit(1)
-		}
-
-		if entryInfo.IsDir() {
-			getFolderEntries(curPath+"/"+entryInfo.Name(), folderEntries)
-		}
+		entriesInfo[entryPath].Info = entryInfo
+		entriesInfo[entryPath].isDir = false
 	}
 }
 
 // TODO: replace the logs with a better way of notify the user if something changed
-func folderListener(watchingPath string, folderEntriesInfo *FolderEntriesInfo, curEntries []fs.DirEntry, folderEntries FolderEntries) bool {
-	if len(curEntries) < (*folderEntriesInfo)[watchingPath].Size {
+func folderListener(watchingPath string, prevFolderEntriesInfo FolderEntriesInfo, curFolderEntriesInfo FolderEntriesInfo) bool {
+	if len(curFolderEntriesInfo[watchingPath].Entries) < len(prevFolderEntriesInfo[watchingPath].Entries) {
 		// TODO: print the created file of folder
 		fmt.Printf("warning: folder or file was deleted inside %s\n", watchingPath)
 		return true
 	}
 
-	if len(curEntries) > (*folderEntriesInfo)[watchingPath].Size {
+	if len(curFolderEntriesInfo[watchingPath].Entries) > len(prevFolderEntriesInfo[watchingPath].Entries) {
 		// TODO: print the deleted file or folder
 		fmt.Printf("warning: folder or file was created inside %s\n", watchingPath)
 		return true
 	}
 
-	if len(curEntries) == (*folderEntriesInfo)[watchingPath].Size {
-		for _, curEntry := range curEntries {
-			curEntryInfo, err := curEntry.Info()
-			if err != nil {
-				fmt.Printf("ERROR: Could not get info of %s : %v", curEntry.Name(), err)
-				os.Exit(1)
-			}
-
-			curNewFileMode := curEntryInfo.Mode()
-
-			if curNewFileMode.IsDir() {
-				nextWatchingPath := watchingPath + "/" + curEntry.Name()
-				isSomethingChange := folderListener(nextWatchingPath, folderEntriesInfo, folderEntries[nextWatchingPath], folderEntries)
+	if len(curFolderEntriesInfo[watchingPath].Entries) == len(prevFolderEntriesInfo[watchingPath].Entries) {
+		for _, curEntryPath := range curFolderEntriesInfo[watchingPath].Entries {
+			isCurEntryDir := curFolderEntriesInfo[curEntryPath].isDir
+			if isCurEntryDir {
+				nextWatchingPath := curEntryPath
+				isSomethingChange := folderListener(nextWatchingPath, prevFolderEntriesInfo, curFolderEntriesInfo)
 				if isSomethingChange {
 					return true
 				}
-
 			} else {
 				// TODO: handle file name changed
-				prevEntryInfo := (*folderEntriesInfo)[watchingPath+"/"+curEntryInfo.Name()]
-				if !prevEntryInfo.Info.ModTime().Equal(curEntryInfo.ModTime()) {
-					fmt.Printf("warning: %s/%s content is updated\n", watchingPath, prevEntryInfo.Info.Name())
+				curEntryInfo := curFolderEntriesInfo[curEntryPath].Info
+				prevEntryInfo := prevFolderEntriesInfo[curEntryPath].Info
+				if !prevEntryInfo.ModTime().Equal(curEntryInfo.ModTime()) {
+					fmt.Printf("warning: %s/%s content is updated\n", watchingPath, prevEntryInfo.Name())
 					return true
 				}
 			}
