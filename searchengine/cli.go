@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"sync"
 	"time"
@@ -30,7 +29,7 @@ type Command struct {
 
 type DirInfo struct {
 	Entries []string
-	Info    fs.FileInfo
+	ModTime time.Time
 	isDir   bool
 }
 

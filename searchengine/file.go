@@ -88,7 +88,7 @@ func getFolderEntriesInfo(curPath string, entriesInfo FolderEntriesInfo) {
 			entriesInfo[entryPath] = &DirInfo{}
 		}
 
-		entriesInfo[entryPath].Info = entryInfo
+		entriesInfo[entryPath].ModTime = entryInfo.ModTime()
 		entriesInfo[entryPath].isDir = false
 	}
 }
@@ -111,17 +111,16 @@ func folderListener(watchingPath string, prevFolderEntriesInfo FolderEntriesInfo
 		for _, curEntryPath := range curFolderEntriesInfo[watchingPath].Entries {
 			isCurEntryDir := curFolderEntriesInfo[curEntryPath].isDir
 			if isCurEntryDir {
-				nextWatchingPath := curEntryPath
-				isSomethingChange := folderListener(nextWatchingPath, prevFolderEntriesInfo, curFolderEntriesInfo)
+				isSomethingChange := folderListener(curEntryPath, prevFolderEntriesInfo, curFolderEntriesInfo)
 				if isSomethingChange {
 					return true
 				}
 			} else {
-				// TODO: handle file name changed
-				curEntryInfo := curFolderEntriesInfo[curEntryPath].Info
-				prevEntryInfo := prevFolderEntriesInfo[curEntryPath].Info
-				if !prevEntryInfo.ModTime().Equal(curEntryInfo.ModTime()) {
-					fmt.Printf("warning: %s/%s content is updated\n", watchingPath, prevEntryInfo.Name())
+				curEntryInfo := curFolderEntriesInfo[curEntryPath]
+				prevEntryInfo, ok := prevFolderEntriesInfo[curEntryPath]
+				if !ok || prevEntryInfo.ModTime.Second() != curEntryInfo.ModTime.Second() {
+					// TODO: tell what changed the content or the file name
+					fmt.Printf("warning: %s content is updated\n", curEntryPath)
 					return true
 				}
 			}
