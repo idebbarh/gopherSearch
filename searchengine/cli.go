@@ -100,44 +100,29 @@ func (c Command) HandleCommand() {
 			return
 		}
 
-		go func() {
-			watchingPath, err := os.Getwd()
-			if err != nil {
-				return
-			}
+		watchingPath, err := os.Getwd()
+		if err == nil {
 			watchingPath += "/" + "testListener"
+			events := goWatch(watchingPath)
 
-			fi, err := os.Stat(watchingPath)
-			if err != nil {
-				fmt.Printf("ERROR: Could not get info of %s : %v", watchingPath, err)
-				os.Exit(1)
-			}
-
-			mode := fi.Mode()
-
-			if !mode.IsDir() {
-				fmt.Printf("Error: could not listener to this path because its not a folder")
-				return
-			}
-
-			fmt.Printf("listening on : %s\n", watchingPath)
-
-			prevFolderEntriesInfo := FolderEntriesInfo{}
-			getFolderEntriesInfo(watchingPath, prevFolderEntriesInfo)
-
-			for {
-				curFolderEntriesInfo := FolderEntriesInfo{}
-				getFolderEntriesInfo(watchingPath, curFolderEntriesInfo)
-
-				isSomethingChange := folderListener(watchingPath, prevFolderEntriesInfo, curFolderEntriesInfo)
-
-				if isSomethingChange {
-					getFolderEntriesInfo(watchingPath, prevFolderEntriesInfo)
+			go func() {
+				for {
+					select {
+					case event := <-events:
+						switch true {
+						case event.Write:
+							fmt.Println("write")
+						case event.Create:
+							fmt.Println("create")
+						case event.Delete:
+							fmt.Println("delete")
+						case event.Rename:
+							fmt.Println("rename")
+						}
+					}
 				}
-
-				time.Sleep(1 * time.Second)
-			}
-		}()
+			}()
+		}
 
 		go indexHandler(c.Path, &inMemoryData, &indexingWG)
 

@@ -7,6 +7,23 @@ import (
 	"time"
 )
 
+type ChangeType = int
+
+type EventsType struct {
+	Write  bool
+	Create bool
+	Delete bool
+	Rename bool
+}
+
+const (
+	WRITE ChangeType = iota
+	CREATE
+	DELETE
+	RENAME
+	NOCHANGE
+)
+
 type FileInfo struct {
 	filePath       string
 	lastUpdateTime time.Time
@@ -61,10 +78,7 @@ func getFolderEntriesInfo(curPath string, entriesInfo FolderEntriesInfo) {
 		os.Exit(1)
 	}
 
-	if entriesInfo[curPath] == nil {
-		entriesInfo[curPath] = &DirInfo{}
-	}
-
+	entriesInfo[curPath] = &DirInfo{}
 	entriesInfo[curPath].Entries = []string{}
 	entriesInfo[curPath].isDir = true
 
@@ -84,48 +98,104 @@ func getFolderEntriesInfo(curPath string, entriesInfo FolderEntriesInfo) {
 			continue
 		}
 
-		if entriesInfo[entryPath] == nil {
-			entriesInfo[entryPath] = &DirInfo{}
-		}
-
+		entriesInfo[entryPath] = &DirInfo{}
 		entriesInfo[entryPath].ModTime = entryInfo.ModTime()
 		entriesInfo[entryPath].isDir = false
 	}
 }
 
-// TODO: replace the logs with a better way of notify the user if something changed
-func folderListener(watchingPath string, prevFolderEntriesInfo FolderEntriesInfo, curFolderEntriesInfo FolderEntriesInfo) bool {
-	if len(curFolderEntriesInfo[watchingPath].Entries) < len(prevFolderEntriesInfo[watchingPath].Entries) {
+func listener(watchingPath string, events chan EventsType) {
+	fmt.Printf("listening on : %s\n", watchingPath)
+	prevFolderEntriesInfo := FolderEntriesInfo{}
+	getFolderEntriesInfo(watchingPath, prevFolderEntriesInfo)
+	for {
+		curFolderEntriesInfo := FolderEntriesInfo{}
+		getFolderEntriesInfo(watchingPath, curFolderEntriesInfo)
+
+		isSomethingChange, changeType := entriesScanner(watchingPath, prevFolderEntriesInfo, curFolderEntriesInfo)
+
+		if isSomethingChange {
+			prevFolderEntriesInfo = make(FolderEntriesInfo)
+			getFolderEntriesInfo(watchingPath, prevFolderEntriesInfo)
+			switch changeType {
+			case WRITE:
+				events <- EventsType{Write: true, Create: false, Delete: false, Rename: false}
+			case CREATE:
+				events <- EventsType{Write: false, Create: true, Delete: false, Rename: false}
+			case DELETE:
+				events <- EventsType{Write: false, Create: false, Delete: true, Rename: false}
+			case RENAME:
+				events <- EventsType{Write: false, Create: false, Delete: false, Rename: true}
+			}
+		}
+
+		time.Sleep(1 * time.Second)
+	}
+}
+
+func goWatch(watchingPath string) chan EventsType {
+	fi, err := os.Stat(watchingPath)
+	if err != nil {
+		fmt.Printf("ERROR: Could not get info of %s : %v", watchingPath, err)
+		os.Exit(1)
+	}
+
+	mode := fi.Mode()
+
+	if !mode.IsDir() {
+		fmt.Printf("Error: could not listener to this path because its not a folder")
+		os.Exit(1)
+	}
+	events := make(chan EventsType)
+
+	go listener(watchingPath, events)
+
+	return events
+}
+
+func entriesScanner(watchingPath string, prevFolderEntriesInfo FolderEntriesInfo, curFolderEntriesInfo FolderEntriesInfo) (bool, ChangeType) {
+	prevWatchingPathInfo, ok := prevFolderEntriesInfo[watchingPath]
+	if !ok {
+		// TODO: tell the changed folder name
+		fmt.Printf("warning: %s is new folder name, maybe a folder name changed\n", watchingPath)
+		return true, RENAME
+	}
+	curWatchingPathInfo := curFolderEntriesInfo[watchingPath]
+	if len(curWatchingPathInfo.Entries) < len(prevWatchingPathInfo.Entries) {
 		// TODO: print the created file of folder
 		fmt.Printf("warning: folder or file was deleted inside %s\n", watchingPath)
-		return true
+		return true, DELETE
 	}
 
-	if len(curFolderEntriesInfo[watchingPath].Entries) > len(prevFolderEntriesInfo[watchingPath].Entries) {
+	if len(curWatchingPathInfo.Entries) > len(prevWatchingPathInfo.Entries) {
 		// TODO: print the deleted file or folder
 		fmt.Printf("warning: folder or file was created inside %s\n", watchingPath)
-		return true
+		return true, CREATE
 	}
 
-	if len(curFolderEntriesInfo[watchingPath].Entries) == len(prevFolderEntriesInfo[watchingPath].Entries) {
-		for _, curEntryPath := range curFolderEntriesInfo[watchingPath].Entries {
-			isCurEntryDir := curFolderEntriesInfo[curEntryPath].isDir
-			if isCurEntryDir {
-				isSomethingChange := folderListener(curEntryPath, prevFolderEntriesInfo, curFolderEntriesInfo)
+	if len(curWatchingPathInfo.Entries) == len(prevWatchingPathInfo.Entries) {
+		for _, curEntryPath := range curWatchingPathInfo.Entries {
+			curEntryInfo := curFolderEntriesInfo[curEntryPath]
+			if curEntryInfo.isDir {
+				isSomethingChange, changeType := entriesScanner(curEntryPath, prevFolderEntriesInfo, curFolderEntriesInfo)
 				if isSomethingChange {
-					return true
+					return isSomethingChange, changeType
 				}
 			} else {
-				curEntryInfo := curFolderEntriesInfo[curEntryPath]
 				prevEntryInfo, ok := prevFolderEntriesInfo[curEntryPath]
 				if !ok || prevEntryInfo.ModTime.Second() != curEntryInfo.ModTime.Second() {
-					// TODO: tell what changed the content or the file name
-					fmt.Printf("warning: %s content is updated\n", curEntryPath)
-					return true
+					if ok {
+						fmt.Printf("warning: %s content is updated\n", curEntryPath)
+						return true, WRITE
+					} else {
+						// TODO: tell the changed file name
+						fmt.Printf("warning: %s name is changed\n", curEntryPath)
+						return true, RENAME
+					}
 				}
 			}
 		}
 	}
 
-	return false
+	return false, NOCHANGE
 }
