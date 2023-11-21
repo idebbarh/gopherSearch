@@ -111,14 +111,14 @@ func (c Command) HandleCommand() {
 					select {
 					case event := <-events:
 						switch true {
-						case event.Write:
-							fmt.Println("write")
-						case event.Create:
-							fmt.Println("create")
-						case event.Delete:
-							fmt.Println("delete")
-						case event.Rename:
-							fmt.Println("rename")
+						case event.Types.Write:
+							fmt.Printf("edited file name: %s\n", event.Info.WriteInfo.Name)
+						case event.Types.Create:
+							fmt.Printf("created file name: %s\n", event.Info.CreateInfo.Name)
+						case event.Types.Delete:
+							fmt.Printf("deleted file name: %s\n", event.Info.DeleteInfo.Name)
+						case event.Types.Rename:
+							fmt.Printf("prevname: %s, new name: %s\n", event.Info.RenameInfo.PrevName, event.Info.RenameInfo.NewName)
 						}
 					}
 				}
