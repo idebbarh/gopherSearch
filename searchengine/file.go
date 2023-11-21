@@ -117,16 +117,7 @@ func listener(watchingPath string, events chan EventsType) {
 		if isSomethingChange {
 			prevFolderEntriesInfo = make(FolderEntriesInfo)
 			getFolderEntriesInfo(watchingPath, prevFolderEntriesInfo)
-			switch changeType {
-			case WRITE:
-				events <- EventsType{Write: true, Create: false, Delete: false, Rename: false}
-			case CREATE:
-				events <- EventsType{Write: false, Create: true, Delete: false, Rename: false}
-			case DELETE:
-				events <- EventsType{Write: false, Create: false, Delete: true, Rename: false}
-			case RENAME:
-				events <- EventsType{Write: false, Create: false, Delete: false, Rename: true}
-			}
+			events <- EventsType{Write: changeType == WRITE, Create: changeType == CREATE, Delete: changeType == DELETE, Rename: changeType == RENAME}
 		}
 
 		time.Sleep(1 * time.Second)
@@ -156,20 +147,36 @@ func goWatch(watchingPath string) chan EventsType {
 func entriesScanner(watchingPath string, prevFolderEntriesInfo FolderEntriesInfo, curFolderEntriesInfo FolderEntriesInfo) (bool, ChangeType) {
 	prevWatchingPathInfo, ok := prevFolderEntriesInfo[watchingPath]
 	if !ok {
-		// TODO: tell the changed folder name
-		fmt.Printf("warning: %s is new folder name, maybe a folder name changed\n", watchingPath)
+		for path := range prevFolderEntriesInfo {
+			_, ok := curFolderEntriesInfo[path]
+			if !ok {
+				fmt.Printf("warning: folder name changed from %s -> %s \n", path, watchingPath)
+				break
+			}
+		}
+
 		return true, RENAME
 	}
 	curWatchingPathInfo := curFolderEntriesInfo[watchingPath]
 	if len(curWatchingPathInfo.Entries) < len(prevWatchingPathInfo.Entries) {
-		// TODO: print the created file of folder
-		fmt.Printf("warning: folder or file was deleted inside %s\n", watchingPath)
+		for path := range prevFolderEntriesInfo {
+			_, ok := curFolderEntriesInfo[path]
+			if !ok {
+				fmt.Printf("warning: %s is deleted from %s\n", path, watchingPath)
+				break
+			}
+		}
 		return true, DELETE
 	}
 
 	if len(curWatchingPathInfo.Entries) > len(prevWatchingPathInfo.Entries) {
-		// TODO: print the deleted file or folder
-		fmt.Printf("warning: folder or file was created inside %s\n", watchingPath)
+		for path := range curFolderEntriesInfo {
+			_, ok := prevFolderEntriesInfo[path]
+			if !ok {
+				fmt.Printf("warning: %s is created inside %s\n", path, watchingPath)
+				break
+			}
+		}
 		return true, CREATE
 	}
 
@@ -188,8 +195,13 @@ func entriesScanner(watchingPath string, prevFolderEntriesInfo FolderEntriesInfo
 						fmt.Printf("warning: %s content is updated\n", curEntryPath)
 						return true, WRITE
 					} else {
-						// TODO: tell the changed file name
-						fmt.Printf("warning: %s name is changed\n", curEntryPath)
+						for path := range prevFolderEntriesInfo {
+							_, ok := curFolderEntriesInfo[path]
+							if !ok {
+								fmt.Printf("warning: file name changed from %s -> %s \n", path, curEntryPath)
+								break
+							}
+						}
 						return true, RENAME
 					}
 				}

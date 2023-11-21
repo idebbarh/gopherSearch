@@ -101,6 +101,7 @@ func (c Command) HandleCommand() {
 		}
 
 		watchingPath, err := os.Getwd()
+
 		if err == nil {
 			watchingPath += "/" + "testListener"
 			events := goWatch(watchingPath)
