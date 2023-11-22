@@ -2,7 +2,6 @@ package searchengine
 
 import (
 	"fmt"
-	"sync"
 	"time"
 )
 
@@ -17,13 +16,15 @@ type FileData struct {
 	LastUpdateTime time.Time
 }
 
-func indexHandler(curPath string, inMemoryData *InMemoryData, wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	for _, f := range getPathFiles(curPath) {
+func indexHandler(filesInfo []FileInfo, inMemoryData *InMemoryData, indexFileName string) {
+	for _, f := range filesInfo {
+		// check if the file already indexed.
 		v, ok := inMemoryData.Ftf[f.filePath]
 
+		// if the file already index.
 		if ok {
+			// check if file modified or not ,if its ignore it,
+			// else redindex it.
 			if v.LastUpdateTime.Equal(f.lastUpdateTime) {
 				fmt.Printf("ignoring %s....\n", f.filePath)
 				continue
@@ -32,6 +33,7 @@ func indexHandler(curPath string, inMemoryData *InMemoryData, wg *sync.WaitGroup
 
 		fmt.Printf("indexing %s....\n", f.filePath)
 
+		// read the file
 		fileContent, err := getFileContent(f.filePath)
 		if err != nil {
 			fmt.Printf("ERROR: Could not read file %s : %v", f.filePath, err)
@@ -40,8 +42,10 @@ func indexHandler(curPath string, inMemoryData *InMemoryData, wg *sync.WaitGroup
 
 		var parsedFile string
 
+		// parse the html
 		htmlParser(fileContent, &parsedFile)
 
+		// reset the df, because will recalc the df, of the file and we dont want to calc the terms again.
 		removeDocumentFrequency(&inMemoryData.Df, inMemoryData.Ftf, f)
 
 		tf := getTermsFrequency(parsedFile)
@@ -50,4 +54,6 @@ func indexHandler(curPath string, inMemoryData *InMemoryData, wg *sync.WaitGroup
 
 		getDocumentFrequency(&inMemoryData.Df, tf)
 	}
+
+	saveToJson(indexFileName, *inMemoryData)
 }

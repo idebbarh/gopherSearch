@@ -71,10 +71,8 @@ func (c Command) HandleCommand() {
 	switch c.Subcommand {
 	case "serve":
 		var inMemoryData InMemoryData
-		var indexingWG sync.WaitGroup
 		var serverWG sync.WaitGroup
 
-		indexingWG.Add(1)
 		serverWG.Add(1)
 
 		indexFileName := getIndexFileNameFromPath(c.Path)
@@ -100,39 +98,34 @@ func (c Command) HandleCommand() {
 			return
 		}
 
-		watchingPath, err := os.Getwd()
+		events := goWatch(c.Path)
 
-		if err == nil {
-			watchingPath += "/" + "testListener"
-			events := goWatch(watchingPath)
-
-			go func() {
-				for {
-					select {
-					case event := <-events:
-						switch true {
-						case event.Types.Write:
-							fmt.Printf("edited file name: %s\n", event.Info.WriteInfo.Name)
-						case event.Types.Create:
-							fmt.Printf("created file name: %s\n", event.Info.CreateInfo.Name)
-						case event.Types.Delete:
-							fmt.Printf("deleted file name: %s\n", event.Info.DeleteInfo.Name)
-						case event.Types.Rename:
-							fmt.Printf("prevname: %s, new name: %s\n", event.Info.RenameInfo.PrevName, event.Info.RenameInfo.NewName)
-						}
+		go func() {
+			for {
+				select {
+				case event := <-events:
+					switch true {
+					case event.Types.Write:
+						file := event.Info.WriteInfo.Name
+						fmt.Printf("edited file name: %s\n", file)
+						fileInfo := getPathFiles(file)
+						go indexHandler(fileInfo, &inMemoryData, indexFileName)
+					case event.Types.Create:
+						fmt.Printf("created file name: %s\n", event.Info.CreateInfo.Name)
+					case event.Types.Delete:
+						fmt.Printf("deleted file name: %s\n", event.Info.DeleteInfo.Name)
+					case event.Types.Rename:
+						fmt.Printf("prevname: %s, new name: %s\n", event.Info.RenameInfo.PrevName, event.Info.RenameInfo.NewName)
 					}
 				}
-			}()
-		}
+			}
+		}()
 
-		go indexHandler(c.Path, &inMemoryData, &indexingWG)
+		filesInfo := getPathFiles(c.Path)
+
+		go indexHandler(filesInfo, &inMemoryData, indexFileName)
 
 		go serveHandler(&inMemoryData, &serverWG)
-
-		// wait for indexing to finish then save data to json
-		indexingWG.Wait()
-
-		saveToJson(indexFileName, inMemoryData)
 
 		// wait for the server to finish then exit the program
 		serverWG.Wait()
