@@ -108,12 +108,14 @@ func (c Command) HandleCommand() {
 					case event.Types.Write:
 						file := event.Info.WriteInfo.Name
 						fmt.Printf("edited file name: %s\n", file)
-						fileInfo := getPathFiles(file)
+						fileInfo := make(FilesInfo)
+						getPathFiles(file, fileInfo)
 						go indexHandler(fileInfo, &inMemoryData, indexFileName)
 					case event.Types.Create:
 						file := event.Info.CreateInfo.Name
 						fmt.Printf("created file name: %s\n", file)
-						fileInfo := getPathFiles(file)
+						fileInfo := make(FilesInfo)
+						getPathFiles(file, fileInfo)
 						go indexHandler(fileInfo, &inMemoryData, indexFileName)
 					case event.Types.Delete:
 						fmt.Printf("deleted file name: %s\n", event.Info.DeleteInfo.Name)
@@ -124,7 +126,8 @@ func (c Command) HandleCommand() {
 			}
 		}()
 
-		filesInfo := getPathFiles(c.Path)
+		filesInfo := make(FilesInfo)
+		getPathFiles(c.Path, filesInfo)
 
 		go indexHandler(filesInfo, &inMemoryData, indexFileName)
 

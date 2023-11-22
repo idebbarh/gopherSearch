@@ -37,19 +37,19 @@ type Event struct {
 	Types EventsType
 	Info  *EventsInfo
 }
-
 type FileInfo struct {
 	filePath       string
 	lastUpdateTime time.Time
 }
+
+type FilesInfo = map[string]FileInfo
 
 func getFileContent(filePath string) (string, error) {
 	fileContent, err := os.ReadFile(filePath)
 	return string(fileContent), err
 }
 
-func getPathFiles(curPath string) []FileInfo {
-	curFiles := []FileInfo{}
+func getPathFiles(curPath string, filesInfo FilesInfo) {
 	fi, err := os.Stat(curPath)
 	if err != nil {
 		fmt.Printf("ERROR: Could not get info of %s : %v\n", curPath, err)
@@ -58,17 +58,15 @@ func getPathFiles(curPath string) []FileInfo {
 	mode := fi.Mode()
 
 	if mode.IsRegular() {
-		res := []FileInfo{}
 
 		pathParts := strings.Split(curPath, "/")
 		lastPart := pathParts[len(pathParts)-1]
 		lastPartParts := strings.Split(lastPart, ".")
 
 		if len(lastPartParts) >= 2 && lastPartParts[len(lastPartParts)-1] == "html" {
-			res = append(res, FileInfo{filePath: curPath, lastUpdateTime: fi.ModTime()})
+			filesInfo[curPath] = FileInfo{filePath: curPath, lastUpdateTime: fi.ModTime()}
 		}
 
-		return res
 	} else if mode.IsDir() {
 		entries, err := os.ReadDir(curPath)
 		if err != nil {
@@ -77,12 +75,9 @@ func getPathFiles(curPath string) []FileInfo {
 		}
 
 		for _, l := range entries {
-			curFiles = append(curFiles, getPathFiles(curPath+"/"+l.Name())...)
+			getPathFiles(curPath+"/"+l.Name(), filesInfo)
 		}
-	} else {
-		return []FileInfo{}
 	}
-	return curFiles
 }
 
 func getFolderEntriesInfo(curPath string, entriesInfo FolderEntriesInfo) {

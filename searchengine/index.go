@@ -16,11 +16,10 @@ type FileData struct {
 	LastUpdateTime time.Time
 }
 
-func indexHandler(filesInfo []FileInfo, inMemoryData *InMemoryData, indexFileName string) {
+func indexHandler(filesInfo FilesInfo, inMemoryData *InMemoryData, indexFileName string) {
 	for _, f := range filesInfo {
 		// check if the file already indexed.
 		v, ok := inMemoryData.Ftf[f.filePath]
-
 		// if the file already index.
 		if ok {
 			// check if file modified or not ,if its ignore it,
