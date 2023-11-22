@@ -52,7 +52,7 @@ func getPathFiles(curPath string) []FileInfo {
 	curFiles := []FileInfo{}
 	fi, err := os.Stat(curPath)
 	if err != nil {
-		fmt.Printf("ERROR: Could not get info of %s : %v", curPath, err)
+		fmt.Printf("ERROR: Could not get info of %s : %v\n", curPath, err)
 		os.Exit(1)
 	}
 	mode := fi.Mode()

@@ -111,7 +111,10 @@ func (c Command) HandleCommand() {
 						fileInfo := getPathFiles(file)
 						go indexHandler(fileInfo, &inMemoryData, indexFileName)
 					case event.Types.Create:
-						fmt.Printf("created file name: %s\n", event.Info.CreateInfo.Name)
+						file := event.Info.CreateInfo.Name
+						fmt.Printf("created file name: %s\n", file)
+						fileInfo := getPathFiles(file)
+						go indexHandler(fileInfo, &inMemoryData, indexFileName)
 					case event.Types.Delete:
 						fmt.Printf("deleted file name: %s\n", event.Info.DeleteInfo.Name)
 					case event.Types.Rename:
