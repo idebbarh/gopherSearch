@@ -124,7 +124,13 @@ func (c Command) HandleCommand() {
 						delete(inMemoryData.Ftf, file)
 						saveToJson(indexFileName, inMemoryData)
 					case event.Types.Rename:
-						fmt.Printf("prevname: %s, new name: %s\n", event.Info.RenameInfo.PrevName, event.Info.RenameInfo.NewName)
+						prevFileName := event.Info.RenameInfo.PrevName
+						newFileName := event.Info.RenameInfo.NewName
+						fmt.Printf("prevname: %s, new name: %s\n", prevFileName, newFileName)
+						fmt.Printf("changing %s in the cache to %s...\n", prevFileName, newFileName)
+						inMemoryData.Ftf[newFileName] = inMemoryData.Ftf[prevFileName]
+						delete(inMemoryData.Ftf, prevFileName)
+						saveToJson(indexFileName, inMemoryData)
 					}
 				}
 			}
