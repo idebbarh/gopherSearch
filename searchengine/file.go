@@ -24,6 +24,7 @@ type EventsInfo struct {
 	RenameInfo struct {
 		PrevName string
 		NewName  string
+		IsDir    bool
 	}
 }
 
@@ -157,18 +158,21 @@ func goWatch(watchingPath string) chan Event {
 func entriesScanner(watchingPath string, prevFolderEntriesInfo FolderEntriesInfo, curFolderEntriesInfo FolderEntriesInfo) (bool, ChangeType, EventsInfo) {
 	prevWatchingPathInfo, ok := prevFolderEntriesInfo[watchingPath]
 	eventInfo := EventsInfo{}
+
 	if !ok {
 		for path := range prevFolderEntriesInfo {
 			_, ok := curFolderEntriesInfo[path]
-			if !ok {
+			if !ok && len(strings.Split(path, "/")) == len(strings.Split(watchingPath, "/")) {
 				eventInfo.RenameInfo.PrevName = path
 				eventInfo.RenameInfo.NewName = watchingPath
+				eventInfo.RenameInfo.IsDir = true
 				break
 			}
 		}
 
 		return true, RENAME, eventInfo
 	}
+
 	curWatchingPathInfo := curFolderEntriesInfo[watchingPath]
 	if len(curWatchingPathInfo.Entries) < len(prevWatchingPathInfo.Entries) {
 		for path := range prevFolderEntriesInfo {
@@ -212,6 +216,7 @@ func entriesScanner(watchingPath string, prevFolderEntriesInfo FolderEntriesInfo
 							if !ok {
 								eventInfo.RenameInfo.PrevName = path
 								eventInfo.RenameInfo.NewName = curEntryPath
+								eventInfo.RenameInfo.IsDir = true
 								break
 							}
 						}

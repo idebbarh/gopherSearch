@@ -49,7 +49,7 @@ func PrintErrorToUser(errorType int) {
 		fmt.Println("ERROR: You must provide a subcommand.")
 		PrintUsage()
 	case NO_PATH_TO_INDEX:
-		fmt.Println("ERROR: you must provide a path to the file or directory to index.")
+		fmt.Println("ERROR: you must provide a curPath to the file or directory to index.")
 		PrintUsage()
 	case UNKOWN_SUBCOMMAND:
 		fmt.Println("ERROR: Unknown subcommand")
@@ -124,12 +124,37 @@ func (c Command) HandleCommand() {
 						delete(inMemoryData.Ftf, file)
 						saveToJson(indexFileName, inMemoryData)
 					case event.Types.Rename:
-						prevFileName := event.Info.RenameInfo.PrevName
-						newFileName := event.Info.RenameInfo.NewName
-						fmt.Printf("prevname: %s, new name: %s\n", prevFileName, newFileName)
-						fmt.Printf("changing %s in the cache to %s...\n", prevFileName, newFileName)
-						inMemoryData.Ftf[newFileName] = inMemoryData.Ftf[prevFileName]
-						delete(inMemoryData.Ftf, prevFileName)
+						prevName := event.Info.RenameInfo.PrevName
+						newName := event.Info.RenameInfo.NewName
+						isDir := event.Info.RenameInfo.IsDir
+
+						fmt.Printf("file name is changed from %s to %s\n", prevName, newName)
+						if !isDir {
+							fmt.Printf("file name is changed from %s to %s\n", prevName, newName)
+							fmt.Printf("changing %s in the cache to %s...\n", prevName, newName)
+							inMemoryData.Ftf[newName] = inMemoryData.Ftf[prevName]
+							delete(inMemoryData.Ftf, prevName)
+						} else {
+							keysToDelete := []string{}
+							for curPath := range inMemoryData.Ftf {
+								if contains, children := isPathContainsPath(prevName, curPath); contains == true {
+									var newFileName string
+									if len(children) > 0 {
+										newFileName = newName + "/" + children
+									} else {
+										newFileName = newName
+									}
+									fmt.Printf("changing %s in the cache to %s...\n", curPath, newFileName)
+									inMemoryData.Ftf[newFileName] = inMemoryData.Ftf[curPath]
+									keysToDelete = append(keysToDelete, curPath)
+								}
+							}
+
+							for _, key := range keysToDelete {
+								delete(inMemoryData.Ftf, key)
+							}
+						}
+
 						saveToJson(indexFileName, inMemoryData)
 					}
 				}

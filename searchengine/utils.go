@@ -2,6 +2,7 @@ package searchengine
 
 import (
 	"errors"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -52,4 +53,22 @@ func assert(condition bool, message string) {
 	if !condition {
 		panic(errors.New("Assertion failed: " + message))
 	}
+}
+
+func isPathContainsPath(parentPath string, childPath string) (bool, string) {
+	var children []string
+	for len(childPath) > 0 {
+		if parentPath == childPath {
+			if len(children) > 0 {
+				slices.Reverse(children)
+				return true, strings.Join(children, "/")
+			} else {
+				return true, ""
+			}
+		}
+		paths := strings.Split(childPath, "/")
+		children = append(children, paths[len(paths)-1])
+		childPath = strings.Join(paths[:len(paths)-1], "/")
+	}
+	return false, ""
 }
