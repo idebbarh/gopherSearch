@@ -16,7 +16,7 @@ type FileData struct {
 	LastUpdateTime time.Time
 }
 
-func indexHandler(filesInfo FilesInfo, inMemoryData *InMemoryData, indexFileName string) {
+func indexHandler(filesInfo FilesInfo, inMemoryData *InMemoryData, indexFileName string, firstIndexing bool) {
 	for _, f := range filesInfo {
 		// check if the file already indexed.
 		v, ok := inMemoryData.Ftf[f.filePath]
@@ -52,6 +52,16 @@ func indexHandler(filesInfo FilesInfo, inMemoryData *InMemoryData, indexFileName
 		inMemoryData.Ftf[f.filePath] = FileData{Terms: tf, Title: docTitle, DocSize: len(tf), LastUpdateTime: f.lastUpdateTime}
 
 		getDocumentFrequency(&inMemoryData.Df, tf)
+	}
+
+	if firstIndexing {
+		for path := range inMemoryData.Ftf {
+			_, ok := filesInfo[path]
+			if !ok {
+				fmt.Printf("removing %s from the cache...\n", path)
+				delete(inMemoryData.Ftf, path)
+			}
+		}
 	}
 
 	saveToJson(indexFileName, *inMemoryData)

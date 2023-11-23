@@ -110,13 +110,13 @@ func (c Command) HandleCommand() {
 						fmt.Printf("edited file name: %s\n", file)
 						fileInfo := make(FilesInfo)
 						getPathFiles(file, fileInfo)
-						go indexHandler(fileInfo, &inMemoryData, indexFileName)
+						go indexHandler(fileInfo, &inMemoryData, indexFileName, false)
 					case event.Types.Create:
 						file := event.Info.CreateInfo.Name
 						fmt.Printf("created file name: %s\n", file)
 						fileInfo := make(FilesInfo)
 						getPathFiles(file, fileInfo)
-						go indexHandler(fileInfo, &inMemoryData, indexFileName)
+						go indexHandler(fileInfo, &inMemoryData, indexFileName, false)
 					case event.Types.Delete:
 						fmt.Printf("deleted file name: %s\n", event.Info.DeleteInfo.Name)
 					case event.Types.Rename:
@@ -128,11 +128,9 @@ func (c Command) HandleCommand() {
 
 		filesInfo := make(FilesInfo)
 		getPathFiles(c.Path, filesInfo)
-
-		go indexHandler(filesInfo, &inMemoryData, indexFileName)
+		go indexHandler(filesInfo, &inMemoryData, indexFileName, true)
 
 		go serveHandler(&inMemoryData, &serverWG)
-
 		// wait for the server to finish then exit the program
 		serverWG.Wait()
 	default:
