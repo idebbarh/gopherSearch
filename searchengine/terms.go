@@ -22,7 +22,7 @@ func saveToJson(filename string, inMemoryData InMemoryData) {
 		os.Exit(1)
 	}
 
-	fmt.Println("Indexing is done, And data saved to: ", filename)
+	fmt.Println("Data saved to: ", filename)
 }
 
 func getTermsFrequency(fileContent string) TermsFrequency {

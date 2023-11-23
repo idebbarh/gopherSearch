@@ -118,7 +118,11 @@ func (c Command) HandleCommand() {
 						getPathFiles(file, fileInfo)
 						go indexHandler(fileInfo, &inMemoryData, indexFileName, false)
 					case event.Types.Delete:
-						fmt.Printf("deleted file name: %s\n", event.Info.DeleteInfo.Name)
+						file := event.Info.DeleteInfo.Name
+						fmt.Printf("deleted file name: %s\n", file)
+						fmt.Printf("removing %s from the cache...\n", file)
+						delete(inMemoryData.Ftf, file)
+						saveToJson(indexFileName, inMemoryData)
 					case event.Types.Rename:
 						fmt.Printf("prevname: %s, new name: %s\n", event.Info.RenameInfo.PrevName, event.Info.RenameInfo.NewName)
 					}
