@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"sync"
+
+	gw "github.com/idebbarh/gopher-watch"
 )
 
 type FilesTermsFrequency = map[string]FileData
@@ -89,68 +91,68 @@ func (c Command) HandleCommand() {
 			return
 		}
 
-		// events := Watch(c.Path)
+		events := gw.Watch(c.Path)
 
-		// go func() {
-		// 	for {
-		// 		select {
-		// 		case event := <-events:
-		// 			switch true {
-		// 			case event.Types.Write:
-		// 				file := event.Info.WriteInfo.Name
-		// 				fmt.Printf("edited file name: %s\n", file)
-		// 				fileInfo := make(FilesInfo)
-		// 				getPathFiles(file, fileInfo)
-		// 				go indexHandler(fileInfo, &inMemoryData, indexFileName, false)
-		// 			case event.Types.Create:
-		// 				file := event.Info.CreateInfo.Name
-		// 				fmt.Printf("created file name: %s\n", file)
-		// 				fileInfo := make(FilesInfo)
-		// 				getPathFiles(file, fileInfo)
-		// 				go indexHandler(fileInfo, &inMemoryData, indexFileName, false)
-		// 			case event.Types.Delete:
-		// 				file := event.Info.DeleteInfo.Name
-		// 				fmt.Printf("deleted file name: %s\n", file)
-		// 				fmt.Printf("removing %s from the cache...\n", file)
-		// 				delete(inMemoryData.Ftf, file)
-		// 				saveToJson(indexFileName, inMemoryData)
-		// 			case event.Types.Rename:
-		// 				prevName := event.Info.RenameInfo.PrevName
-		// 				newName := event.Info.RenameInfo.NewName
-		// 				isDir := event.Info.RenameInfo.IsDir
-		//
-		// 				fmt.Printf("file name is changed from %s to %s\n", prevName, newName)
-		// 				if !isDir {
-		// 					fmt.Printf("file name is changed from %s to %s\n", prevName, newName)
-		// 					fmt.Printf("changing %s in the cache to %s...\n", prevName, newName)
-		// 					inMemoryData.Ftf[newName] = inMemoryData.Ftf[prevName]
-		// 					delete(inMemoryData.Ftf, prevName)
-		// 				} else {
-		// 					keysToDelete := []string{}
-		// 					for curPath := range inMemoryData.Ftf {
-		// 						if contains, children := isPathContainsPath(prevName, curPath); contains == true {
-		// 							var newFileName string
-		// 							if len(children) > 0 {
-		// 								newFileName = newName + "/" + children
-		// 							} else {
-		// 								newFileName = newName
-		// 							}
-		// 							fmt.Printf("changing %s in the cache to %s...\n", curPath, newFileName)
-		// 							inMemoryData.Ftf[newFileName] = inMemoryData.Ftf[curPath]
-		// 							keysToDelete = append(keysToDelete, curPath)
-		// 						}
-		// 					}
-		//
-		// 					for _, key := range keysToDelete {
-		// 						delete(inMemoryData.Ftf, key)
-		// 					}
-		// 				}
-		//
-		// 				saveToJson(indexFileName, inMemoryData)
-		// 			}
-		// 		}
-		// 	}
-		// }()
+		go func() {
+			for {
+				select {
+				case event := <-events:
+					switch true {
+					case event.Types.Write:
+						file := event.Info.WriteInfo.Name
+						fmt.Printf("edited file name: %s\n", file)
+						fileInfo := make(FilesInfo)
+						getPathFiles(file, fileInfo)
+						go indexHandler(fileInfo, &inMemoryData, indexFileName, false)
+					case event.Types.Create:
+						file := event.Info.CreateInfo.Name
+						fmt.Printf("created file name: %s\n", file)
+						fileInfo := make(FilesInfo)
+						getPathFiles(file, fileInfo)
+						go indexHandler(fileInfo, &inMemoryData, indexFileName, false)
+					case event.Types.Delete:
+						file := event.Info.DeleteInfo.Name
+						fmt.Printf("deleted file name: %s\n", file)
+						fmt.Printf("removing %s from the cache...\n", file)
+						delete(inMemoryData.Ftf, file)
+						saveToJson(indexFileName, inMemoryData)
+					case event.Types.Rename:
+						prevName := event.Info.RenameInfo.PrevName
+						newName := event.Info.RenameInfo.NewName
+						isDir := event.Info.RenameInfo.IsDir
+
+						fmt.Printf("file name is changed from %s to %s\n", prevName, newName)
+						if !isDir {
+							fmt.Printf("file name is changed from %s to %s\n", prevName, newName)
+							fmt.Printf("changing %s in the cache to %s...\n", prevName, newName)
+							inMemoryData.Ftf[newName] = inMemoryData.Ftf[prevName]
+							delete(inMemoryData.Ftf, prevName)
+						} else {
+							keysToDelete := []string{}
+							for curPath := range inMemoryData.Ftf {
+								if contains, children := isPathContainsPath(prevName, curPath); contains == true {
+									var newFileName string
+									if len(children) > 0 {
+										newFileName = newName + "/" + children
+									} else {
+										newFileName = newName
+									}
+									fmt.Printf("changing %s in the cache to %s...\n", curPath, newFileName)
+									inMemoryData.Ftf[newFileName] = inMemoryData.Ftf[curPath]
+									keysToDelete = append(keysToDelete, curPath)
+								}
+							}
+
+							for _, key := range keysToDelete {
+								delete(inMemoryData.Ftf, key)
+							}
+						}
+
+						saveToJson(indexFileName, inMemoryData)
+					}
+				}
+			}
+		}()
 
 		filesInfo := make(FilesInfo)
 		getPathFiles(c.Path, filesInfo)
